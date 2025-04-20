@@ -32,7 +32,16 @@ THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPL
 NEXWINDS SOLUTIONS LDA SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ### Security Disclaimer
-While we strive to ensure the security of our software, we make no guarantees regarding its security or suitability for any specific purpose. Users are responsible for implementing appropriate security measures when using this software, especially in production environments.
+While we strive to ensure the security of our software, we make no guarantees regarding its security or suitability for any specific purpose. Users are responsible for implementing appropriate security measures when using this software, especially in production environments. This includes, but is not limited to:
+
+1. Running the software with proper access controls and authentication mechanisms
+2. Implementing secure network configurations, firewalls, and encryption
+3. Regularly updating the software to include security patches and fixes
+4. Performing security audits and vulnerability assessments
+5. Following industry-standard security practices for database systems
+6. Securely storing and protecting access credentials
+
+NEXDB should not be used for processing sensitive or regulated data without proper security controls in place. Users should refer to our SECURITY.md document for recommended security practices and guidelines. By using this software, you acknowledge that you understand and accept these security responsibilities.
 
 ## Questions or Permissions
 - For inquiries or commercial use permissions, contact: support@nexwinds.com
