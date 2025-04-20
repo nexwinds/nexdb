@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}SQL Query - Database Explorer - NexDB Manager{% endblock %}
+
+{% block head %}
+<!-- CodeMirror for SQL editor -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/theme/monokai.min.css">
+<style>
+    .CodeMirror {
+        height: 200px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .cm-s-monokai .CodeMirror-gutters {
+        background-color: #272822;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('database.db_explorer.index') }}">Database Explorer</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('database.db_explorer.index', db_type=db_type, db_name=db_name) }}">{{ db_name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">SQL Query</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2><i class="fas fa-terminal me-2"></i>SQL Query</h2>
+    </div>
+    <div class="col-md-6 text-end">
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-server me-1"></i>{{ db_type|upper }}
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item {% if db_type == 'mysql' %}active{% endif %}" 
+                      href="{{ url_for('database.db_explorer.run_query', db_type='mysql', db_name=db_name) }}">MySQL</a></li>
+                <li><a class="dropdown-item {% if db_type == 'postgres' %}active{% endif %}" 
+                      href="{{ url_for('database.db_explorer.run_query', db_type='postgres', db_name=db_name) }}">PostgreSQL</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Query Editor Card -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0"><i class="fas fa-code me-2"></i>SQL Editor</h5>
+            </div>
+            <div class="col text-end">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-database me-1"></i>{{ db_name }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        {% for db in databases %}
+                        <li><a class="dropdown-item {% if db == db_name %}active{% endif %}" 
+                              href="{{ url_for('database.db_explorer.run_query', db_type=db_type, db_name=db) }}">{{ db }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('database.db_explorer.run_query') }}">
+            <input type="hidden" name="db_type" value="{{ db_type }}">
+            <input type="hidden" name="db_name" value="{{ db_name }}">
+            
+            <div class="mb-3">
+                <textarea id="sql-editor" name="query" class="form-control">{{ query }}</textarea>
+            </div>
+            
+            <div class="text-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-play me-1"></i>Execute
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Query Results -->
+{% if results is not none %}
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-table me-2"></i>Query Results</h5>
+            <span class="badge bg-success">{{ affected_rows }} row{% if affected_rows != 1 %}s{% endif %} ({{ execution_time }} ms)</span>
+        </div>
+    </div>
+    
+    {% if results|length > 0 %}
+    <div class="table-responsive">
+        <table class="table table-hover table-striped mb-0">
+            <thead>
+                <tr>
+                    {% for column in results[0].keys() %}
+                    <th>{{ column }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in results %}
+                <tr>
+                    {% for value in row.values() %}
+                    <td>
+                        {% if value is none %}
+                        <span class="text-muted font-italic">NULL</span>
+                        {% elif value is string and value|length > 100 %}
+                        <span title="{{ value }}">{{ value[:100] }}...</span>
+                        {% else %}
+                        {{ value }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body">
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle me-2"></i>Query executed successfully. No rows returned.
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if error %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Error</h5>
+    </div>
+    <div class="card-body">
+        <pre class="text-danger mb-0">{{ error }}</pre>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<!-- CodeMirror JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/sql/sql.min.js"></script>
+<script>
+    // Initialize SQL editor
+    const editor = CodeMirror.fromTextArea(document.getElementById('sql-editor'), {
+        mode: 'text/x-sql',
+        theme: 'monokai',
+        lineNumbers: true,
+        indentWithTabs: true,
+        smartIndent: true,
+        lineWrapping: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        extraKeys: {
+            'Ctrl-Enter': function(cm) {
+                cm.getTextArea().form.submit();
+            }
+        }
+    });
+    
+    // Set query from textarea
+    const queryText = {{ query|tojson|safe }};
+    editor.setValue(queryText || 'SELECT * FROM ');
+    
+    // Focus editor
+    setTimeout(function() {
+        editor.focus();
+        editor.setCursor(editor.lineCount(), 0);
+    }, 100);
+</script>
+{% endblock %} 

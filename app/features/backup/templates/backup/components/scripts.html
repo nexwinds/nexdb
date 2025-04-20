@@ -1,0 +1,132 @@
+<!-- Database variables rendered by Jinja2 -->
+<script>
+    // Database options for backup forms
+    var mysqlDatabases = {{ mysql_dbs|tojson }};
+    var postgresDatabases = {{ postgres_dbs|tojson }};
+</script>
+
+<!-- Main JavaScript -->
+<script>
+    // Populate dropdown based on database type
+    function populateDatabases(dbTypeId, dbNameId) {
+        const dbType = document.getElementById(dbTypeId);
+        const dbName = document.getElementById(dbNameId);
+        
+        if (!dbType || !dbName) return;
+        
+        dbType.addEventListener('change', function() {
+            // Clear previous options
+            dbName.innerHTML = '<option value="">Select database</option>';
+            
+            // Add options based on selected type
+            if (this.value === 'mysql') {
+                mysqlDatabases.forEach(function(db) {
+                    const option = document.createElement('option');
+                    option.value = db;
+                    option.textContent = db;
+                    dbName.appendChild(option);
+                });
+            } else if (this.value === 'postgres') {
+                postgresDatabases.forEach(function(db) {
+                    const option = document.createElement('option');
+                    option.value = db;
+                    option.textContent = db;
+                    dbName.appendChild(option);
+                });
+            }
+        });
+    }
+    
+    // Initialize event handlers for modals
+    function initModalHandlers() {
+        // Upload to S3 modal
+        const uploadToS3Modal = document.getElementById('uploadToS3Modal');
+        if (uploadToS3Modal) {
+            uploadToS3Modal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const backupFile = button.getAttribute('data-backup-file');
+                
+                document.getElementById('backupFileInput').value = backupFile;
+                document.getElementById('backupFileName').textContent = backupFile;
+            });
+        }
+        
+        // Download from S3 modal
+        const downloadFromS3Modal = document.getElementById('downloadFromS3Modal');
+        if (downloadFromS3Modal) {
+            downloadFromS3Modal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const s3Object = button.getAttribute('data-s3-object');
+                
+                document.getElementById('s3ObjectInput').value = s3Object;
+                document.getElementById('s3ObjectName').textContent = s3Object;
+            });
+        }
+        
+        // Delete local backup modal
+        const deleteLocalBackupModal = document.getElementById('deleteLocalBackupModal');
+        if (deleteLocalBackupModal) {
+            deleteLocalBackupModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const backupFile = button.getAttribute('data-backup-file');
+                
+                document.getElementById('deleteBackupFileInput').value = backupFile;
+                document.getElementById('deleteBackupFileName').textContent = backupFile;
+                document.getElementById('confirmDeleteLocal').value = '';
+            });
+        }
+        
+        // Delete S3 backup modal
+        const deleteS3BackupModal = document.getElementById('deleteS3BackupModal');
+        if (deleteS3BackupModal) {
+            deleteS3BackupModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const s3Object = button.getAttribute('data-s3-object');
+                
+                document.getElementById('deleteS3ObjectInput').value = s3Object;
+                document.getElementById('deleteS3ObjectName').textContent = s3Object;
+                document.getElementById('confirmDeleteS3').value = '';
+            });
+        }
+        
+        // Cancel scheduled backup modal
+        const cancelScheduledBackupModal = document.getElementById('cancelScheduledBackupModal');
+        if (cancelScheduledBackupModal) {
+            cancelScheduledBackupModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const jobId = button.getAttribute('data-job-id');
+                
+                document.getElementById('jobIdInput').value = jobId;
+            });
+        }
+    }
+    
+    // Initialize form validation
+    function initFormValidation() {
+        const forms = document.querySelectorAll('.needs-validation');
+        
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }
+    
+    // Initialize all components when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize dropdowns
+        populateDatabases('db_type', 'db_name');
+        populateDatabases('db_type_schedule', 'db_name_schedule');
+        
+        // Initialize modal handlers
+        initModalHandlers();
+        
+        // Initialize form validation
+        initFormValidation();
+    });
+</script> 

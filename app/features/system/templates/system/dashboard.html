@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}System Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  .card {
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  .metric-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  .metric-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+  }
+  .progress {
+    height: 10px;
+    margin-top: 5px;
+  }
+  .system-info-item {
+    margin-bottom: 10px;
+  }
+  .system-info-label {
+    font-weight: bold;
+  }
+  .refresh-btn {
+    float: right;
+  }
+  .table-processes {
+    font-size: 0.9rem;
+  }
+  .table-processes th {
+    font-weight: 600;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">System Dashboard</h1>
+    <div>
+      <span class="text-muted me-3">Last updated: <span id="last-updated">{{ timestamp }}</span></span>
+      <button id="refresh-dashboard" class="btn btn-sm btn-primary">
+        <i class="fas fa-sync"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- System Info -->
+  <div class="row">
+    <div class="col-md-6 col-lg-4">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">System Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="system-info-item">
+            <span class="system-info-label">Hostname:</span>
+            <span id="hostname">{{ system_info.hostname }}</span>
+          </div>
+          <div class="system-info-item">
+            <span class="system-info-label">IP Address:</span>
+            <span id="ip-address">{{ system_info.ip }}</span>
+          </div>
+          <div class="system-info-item">
+            <span class="system-info-label">Platform:</span>
+            <span id="platform">{{ system_info.platform }} {{ system_info.platform_version }}</span>
+          </div>
+          <div class="system-info-item">
+            <span class="system-info-label">Architecture:</span>
+            <span id="architecture">{{ system_info.architecture }}</span>
+          </div>
+          <div class="system-info-item">
+            <span class="system-info-label">Processor:</span>
+            <span id="processor">{{ system_info.processor }}</span>
+          </div>
+          <div class="system-info-item">
+            <span class="system-info-label">Python Version:</span>
+            <span id="python-version">{{ system_info.python_version }}</span>
+          </div>
+          <div class="system-info-item">
+            <span class="system-info-label">Boot Time:</span>
+            <span id="boot-time">{{ system_info.boot_time }}</span>
+          </div>
+          <div class="system-info-item">
+            <span class="system-info-label">System Uptime:</span>
+            <span id="uptime">{{ system_info.uptime }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CPU & Memory Usage -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">CPU & Memory</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-4">
+            <div class="d-flex justify-content-between">
+              <span>CPU Usage</span>
+              <span id="cpu-percent">{{ system_usage.cpu.percent }}%</span>
+            </div>
+            <div class="progress">
+              <div id="cpu-progress" class="progress-bar bg-primary" role="progressbar" style="width: {{ system_usage.cpu.percent }}%" aria-valuenow="{{ system_usage.cpu.percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="mt-2 small text-muted">
+              <span id="cpu-count">{{ system_usage.cpu.count }} cores available</span>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <div class="d-flex justify-content-between">
+              <span>Memory Usage</span>
+              <span id="memory-percent">{{ system_usage.memory.percent }}%</span>
+            </div>
+            <div class="progress">
+              <div id="memory-progress" class="progress-bar bg-success" role="progressbar" style="width: {{ system_usage.memory.percent }}%" aria-valuenow="{{ system_usage.memory.percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="mt-2 small text-muted">
+              <span id="memory-used">{{ system_usage.memory.used_gb }} GB</span> /
+              <span id="memory-total">{{ system_usage.memory.total_gb }} GB</span> used
+            </div>
+          </div>
+          
+          <div>
+            <div class="d-flex justify-content-between">
+              <span>Swap Usage</span>
+              <span id="swap-percent">{{ system_usage.swap.percent }}%</span>
+            </div>
+            <div class="progress">
+              <div id="swap-progress" class="progress-bar bg-warning" role="progressbar" style="width: {{ system_usage.swap.percent }}%" aria-valuenow="{{ system_usage.swap.percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="mt-2 small text-muted">
+              <span id="swap-used">{{ system_usage.swap.used_gb }} GB</span> /
+              <span id="swap-total">{{ system_usage.swap.total_gb }} GB</span> used
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disk Usage -->
+    <div class="col-md-6 col-lg-4">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Disk Usage</h5>
+        </div>
+        <div class="card-body">
+          <div id="disk-usage">
+            {% for disk in system_usage.disks %}
+            <div class="mb-3">
+              <div class="d-flex justify-content-between">
+                <span>{{ disk.mountpoint }}</span>
+                <span>{{ disk.percent }}%</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-info" role="progressbar" style="width: {{ disk.percent }}%" aria-valuenow="{{ disk.percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              <div class="mt-1 small text-muted">
+                {{ disk.used_gb }} GB / {{ disk.total_gb }} GB
+                ({{ disk.free_gb }} GB free)
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Network Stats & Processes -->
+  <div class="row">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Network Stats</h5>
+          <a href="/system/network" class="btn btn-sm btn-outline-primary">View Details</a>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3 text-center">
+                <div class="metric-label">Data Sent</div>
+                <div id="bytes-sent" class="metric-value">{{ system_usage.network.bytes_sent_mb }} MB</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3 text-center">
+                <div class="metric-label">Data Received</div>
+                <div id="bytes-recv" class="metric-value">{{ system_usage.network.bytes_recv_mb }} MB</div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3 text-center">
+                <div class="metric-label">Packets Sent</div>
+                <div id="packets-sent" class="metric-value">{{ system_usage.network.packets_sent }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3 text-center">
+                <div class="metric-label">Packets Received</div>
+                <div id="packets-recv" class="metric-value">{{ system_usage.network.packets_recv }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="text-center">
+                <div class="metric-label">Errors In</div>
+                <div id="errin" class="metric-value">{{ system_usage.network.errin }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="text-center">
+                <div class="metric-label">Errors Out</div>
+                <div id="errout" class="metric-value">{{ system_usage.network.errout }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Top Processes</h5>
+          <a href="/system/processes" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover table-processes">
+              <thead>
+                <tr>
+                  <th>PID</th>
+                  <th>Name</th>
+                  <th>User</th>
+                  <th>Memory</th>
+                  <th>CPU</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="process-list">
+                {% for proc in processes %}
+                <tr>
+                  <td>{{ proc.pid }}</td>
+                  <td>{{ proc.name }}</td>
+                  <td>{{ proc.username }}</td>
+                  <td>{{ proc.memory_mb }} MB</td>
+                  <td>{{ proc.cpu_percent }}%</td>
+                  <td>{{ proc.status }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Refresh dashboard data every 30 seconds
+    let refreshInterval = setInterval(fetchDashboardData, 30000);
+    
+    // Manual refresh button
+    document.getElementById('refresh-dashboard').addEventListener('click', function() {
+      fetchDashboardData();
+    });
+    
+    function fetchDashboardData() {
+      fetch('/system/api/dashboard')
+        .then(response => response.json())
+        .then(data => {
+          updateDashboard(data);
+        })
+        .catch(error => {
+          console.error('Error fetching dashboard data:', error);
+        });
+    }
+    
+    function updateDashboard(data) {
+      // Update timestamp
+      document.getElementById('last-updated').textContent = data.timestamp;
+      
+      // Update system info
+      const sysInfo = data.system_info;
+      document.getElementById('hostname').textContent = sysInfo.hostname;
+      document.getElementById('ip-address').textContent = sysInfo.ip;
+      document.getElementById('platform').textContent = `${sysInfo.platform} ${sysInfo.platform_version}`;
+      document.getElementById('architecture').textContent = sysInfo.architecture;
+      document.getElementById('processor').textContent = sysInfo.processor;
+      document.getElementById('python-version').textContent = sysInfo.python_version;
+      document.getElementById('boot-time').textContent = sysInfo.boot_time;
+      document.getElementById('uptime').textContent = sysInfo.uptime;
+      
+      // Update CPU & Memory
+      const sysUsage = data.system_usage;
+      document.getElementById('cpu-percent').textContent = `${sysUsage.cpu.percent}%`;
+      document.getElementById('cpu-progress').style.width = `${sysUsage.cpu.percent}%`;
+      document.getElementById('cpu-progress').setAttribute('aria-valuenow', sysUsage.cpu.percent);
+      document.getElementById('cpu-count').textContent = `${sysUsage.cpu.count} cores available`;
+      
+      document.getElementById('memory-percent').textContent = `${sysUsage.memory.percent}%`;
+      document.getElementById('memory-progress').style.width = `${sysUsage.memory.percent}%`;
+      document.getElementById('memory-progress').setAttribute('aria-valuenow', sysUsage.memory.percent);
+      document.getElementById('memory-used').textContent = `${sysUsage.memory.used_gb} GB`;
+      document.getElementById('memory-total').textContent = `${sysUsage.memory.total_gb} GB`;
+      
+      document.getElementById('swap-percent').textContent = `${sysUsage.swap.percent}%`;
+      document.getElementById('swap-progress').style.width = `${sysUsage.swap.percent}%`;
+      document.getElementById('swap-progress').setAttribute('aria-valuenow', sysUsage.swap.percent);
+      document.getElementById('swap-used').textContent = `${sysUsage.swap.used_gb} GB`;
+      document.getElementById('swap-total').textContent = `${sysUsage.swap.total_gb} GB`;
+      
+      // Update disk usage
+      let diskHtml = '';
+      sysUsage.disks.forEach(disk => {
+        diskHtml += `
+          <div class="mb-3">
+            <div class="d-flex justify-content-between">
+              <span>${disk.mountpoint}</span>
+              <span>${disk.percent}%</span>
+            </div>
+            <div class="progress">
+              <div class="progress-bar bg-info" role="progressbar" style="width: ${disk.percent}%" 
+                aria-valuenow="${disk.percent}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="mt-1 small text-muted">
+              ${disk.used_gb} GB / ${disk.total_gb} GB
+              (${disk.free_gb} GB free)
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('disk-usage').innerHTML = diskHtml;
+      
+      // Update network stats
+      document.getElementById('bytes-sent').textContent = `${sysUsage.network.bytes_sent_mb} MB`;
+      document.getElementById('bytes-recv').textContent = `${sysUsage.network.bytes_recv_mb} MB`;
+      document.getElementById('packets-sent').textContent = sysUsage.network.packets_sent;
+      document.getElementById('packets-recv').textContent = sysUsage.network.packets_recv;
+      document.getElementById('errin').textContent = sysUsage.network.errin;
+      document.getElementById('errout').textContent = sysUsage.network.errout;
+      
+      // Update process list
+      let processHtml = '';
+      data.processes.forEach(proc => {
+        processHtml += `
+          <tr>
+            <td>${proc.pid}</td>
+            <td>${proc.name}</td>
+            <td>${proc.username}</td>
+            <td>${proc.memory_mb} MB</td>
+            <td>${proc.cpu_percent}%</td>
+            <td>${proc.status}</td>
+          </tr>
+        `;
+      });
+      document.getElementById('process-list').innerHTML = processHtml;
+    }
+  });
+</script>
+{% endblock %} 

@@ -1,0 +1,884 @@
+{% extends "base.html" %}
+
+{% block title %}System Services{% endblock %}
+
+{% block extra_css %}
+<style>
+  .card {
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  .service-status {
+    font-weight: bold;
+  }
+  .status-running {
+    color: #28a745;
+  }
+  .status-stopped {
+    color: #dc3545;
+  }
+  .action-buttons .btn {
+    margin-right: 5px;
+  }
+  .firewall-table {
+    font-size: 0.9rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">System Services</h1>
+    <div>
+      <span class="text-muted me-3">Last updated: <span id="last-updated">{{ timestamp }}</span></span>
+      <button id="refresh-services" class="btn btn-sm btn-primary">
+        <i class="fas fa-sync"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Services Status -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Services</h5>
+          <div>
+            <button id="start-all-services" class="btn btn-sm btn-success">
+              <i class="fas fa-play"></i> Start All
+            </button>
+            <button id="stop-all-services" class="btn btn-sm btn-danger">
+              <i class="fas fa-stop"></i> Stop All
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Service</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="service-list">
+                {% for service in services %}
+                <tr>
+                  <td>
+                    <span class="service-status {{ 'status-running' if service.status == 'running' else 'status-stopped' }}">
+                      <i class="fas {{ 'fa-check-circle' if service.status == 'running' else 'fa-times-circle' }}"></i>
+                      {{ service.status|upper }}
+                    </span>
+                  </td>
+                  <td>{{ service.name }}</td>
+                  <td class="action-buttons">
+                    {% if service.status == 'running' %}
+                    <button class="btn btn-sm btn-warning stop-service" data-service="{{ service.name }}">
+                      <i class="fas fa-stop"></i> Stop
+                    </button>
+                    <button class="btn btn-sm btn-info restart-service" data-service="{{ service.name }}">
+                      <i class="fas fa-sync"></i> Restart
+                    </button>
+                    {% else %}
+                    <button class="btn btn-sm btn-success start-service" data-service="{{ service.name }}">
+                      <i class="fas fa-play"></i> Start
+                    </button>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Server Options -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Timezone</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="timezone-select" class="form-label">Current Timezone</label>
+            <select id="timezone-select" class="form-select">
+              {% for tz in timezones %}
+              <option value="{{ tz.value }}" {{ 'selected' if tz.value == current_timezone }}>{{ tz.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <p>Server Time: <strong id="server-time">{{ server_time }}</strong></p>
+          </div>
+          <button id="update-timezone" class="btn btn-primary">Update Timezone</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Web Server</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <button id="reload-web-server" class="btn btn-primary mb-2 me-2">
+              <i class="fas fa-sync"></i> Reload Web Server
+            </button>
+            <button id="clear-cache" class="btn btn-warning mb-2">
+              <i class="fas fa-broom"></i> Clear Cache
+            </button>
+          </div>
+          <div class="mb-3">
+            <label for="server-port" class="form-label">Panel Port</label>
+            <div class="input-group">
+              <input type="number" class="form-control" id="server-port" value="{{ server_port }}">
+              <button id="update-port" class="btn btn-primary">Update</button>
+            </div>
+            <small class="form-text text-muted">Changing the port requires a server restart.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cloud & Backups -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Cloud Server</h5>
+        </div>
+        <div class="card-body">
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="cloud-enabled" {{ 'checked' if cloud_enabled }}>
+            <label class="form-check-label" for="cloud-enabled">Enable Cloud Synchronization</label>
+          </div>
+          <div class="mb-3">
+            <label for="cloud-provider" class="form-label">Cloud Provider</label>
+            <select id="cloud-provider" class="form-select" {{ 'disabled' if not cloud_enabled }}>
+              <option value="aws" {{ 'selected' if cloud_provider == 'aws' }}>AWS S3</option>
+              <option value="gcp" {{ 'selected' if cloud_provider == 'gcp' }}>Google Cloud Storage</option>
+              <option value="azure" {{ 'selected' if cloud_provider == 'azure' }}>Azure Blob Storage</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="cloud-region" class="form-label">Region</label>
+            <select id="cloud-region" class="form-select" {{ 'disabled' if not cloud_enabled }}>
+              {% for region in cloud_regions %}
+              <option value="{{ region.value }}" {{ 'selected' if region.value == cloud_region }}>{{ region.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button id="save-cloud-settings" class="btn btn-primary" {{ 'disabled' if not cloud_enabled }}>Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Backups Configuration</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="backup-frequency" class="form-label">Backup Frequency</label>
+            <select id="backup-frequency" class="form-select">
+              <option value="daily" {{ 'selected' if backup_config.frequency == 'daily' }}>Daily</option>
+              <option value="weekly" {{ 'selected' if backup_config.frequency == 'weekly' }}>Weekly</option>
+              <option value="monthly" {{ 'selected' if backup_config.frequency == 'monthly' }}>Monthly</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="backup-retention" class="form-label">Backup Retention (days)</label>
+            <input type="number" id="backup-retention" class="form-control" value="{{ backup_config.retention_days }}">
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="backup-cloud" {{ 'checked' if backup_config.cloud_sync }}>
+            <label class="form-check-label" for="backup-cloud">
+              Sync backups to cloud
+            </label>
+          </div>
+          <button id="save-backup-config" class="btn btn-primary">Save Configuration</button>
+          <a href="{{ url_for('backup.index') }}" class="btn btn-outline-primary">Manage Backups</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Security Settings -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">Security</h5>
+        </div>
+        <div class="card-body">
+          <ul class="nav nav-tabs" id="securityTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="firewall-tab" data-bs-toggle="tab" data-bs-target="#firewall" type="button" role="tab" aria-controls="firewall" aria-selected="true">Firewall Rules</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="auth-tab" data-bs-toggle="tab" data-bs-target="#auth" type="button" role="tab" aria-controls="auth" aria-selected="false">Authentication</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#access" type="button" role="tab" aria-controls="access" aria-selected="false">Access Control</button>
+            </li>
+          </ul>
+          <div class="tab-content p-3" id="securityTabsContent">
+            <!-- Firewall Rules -->
+            <div class="tab-pane fade show active" id="firewall" role="tabpanel" aria-labelledby="firewall-tab">
+              <div class="d-flex justify-content-end mb-3">
+                <button id="add-firewall-rule" class="btn btn-sm btn-success">
+                  <i class="fas fa-plus"></i> Add Rule
+                </button>
+              </div>
+              
+              <div class="table-responsive">
+                <table class="table table-hover firewall-table">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Port Range</th>
+                      <th>IP Version</th>
+                      <th>Source</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="firewall-rules">
+                    {% for rule in firewall_rules %}
+                    <tr>
+                      <td>{{ rule.type }}</td>
+                      <td>{{ rule.port_range }}</td>
+                      <td>{{ rule.ip_version }}</td>
+                      <td>{{ rule.source }}</td>
+                      <td>
+                        <button class="btn btn-sm btn-info edit-rule" data-rule-id="{{ rule.id }}">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-rule" data-rule-id="{{ rule.id }}">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <!-- Authentication -->
+            <div class="tab-pane fade" id="auth" role="tabpanel" aria-labelledby="auth-tab">
+              <div class="mb-4">
+                <h6>Basic Authentication</h6>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="basic-auth-enabled" {{ 'checked' if security_config.basic_auth_enabled }}>
+                  <label class="form-check-label" for="basic-auth-enabled">Enable Basic Authentication</label>
+                </div>
+                <div class="mb-3">
+                  <label for="basic-auth-username" class="form-label">Username</label>
+                  <input type="text" id="basic-auth-username" class="form-control" value="{{ security_config.basic_auth_username }}" {{ 'disabled' if not security_config.basic_auth_enabled }}>
+                </div>
+                <div class="mb-3">
+                  <label for="basic-auth-password" class="form-label">Password</label>
+                  <input type="password" id="basic-auth-password" class="form-control" placeholder="Enter new password" {{ 'disabled' if not security_config.basic_auth_enabled }}>
+                </div>
+                <button id="save-basic-auth" class="btn btn-primary" {{ 'disabled' if not security_config.basic_auth_enabled }}>Save Basic Auth</button>
+              </div>
+              
+              <div class="mb-4">
+                <h6>Security Entrance Path</h6>
+                <div class="mb-3">
+                  <div class="input-group">
+                    <span class="input-group-text">/</span>
+                    <input type="text" id="security-entrance-path" class="form-control" value="{{ security_config.security_entrance }}" placeholder="custom-login-path">
+                  </div>
+                  <small class="form-text text-muted">Custom path to access the login page (leave blank to disable)</small>
+                </div>
+                <button id="save-security-entrance" class="btn btn-primary">Save Entrance Path</button>
+              </div>
+            </div>
+            
+            <!-- Access Control -->
+            <div class="tab-pane fade" id="access" role="tabpanel" aria-labelledby="access-tab">
+              <div class="mb-4">
+                <h6>IPv6 Access</h6>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="ipv6-enabled" {{ 'checked' if security_config.ipv6_enabled }}>
+                  <label class="form-check-label" for="ipv6-enabled">Enable IPv6 Access</label>
+                </div>
+              </div>
+              
+              <div class="mb-4">
+                <h6>IP Access Restrictions</h6>
+                <div class="mb-3">
+                  <label for="allowed-ips" class="form-label">Allowed IP Addresses</label>
+                  <textarea id="allowed-ips" class="form-control" rows="3" placeholder="Enter one IP address per line">{{ security_config.allowed_ips|join('\n') }}</textarea>
+                  <small class="form-text text-muted">Leave blank to allow all IPs</small>
+                </div>
+                <button id="save-ip-restrictions" class="btn btn-primary">Save IP Restrictions</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add Rule Modal -->
+  <div class="modal fade" id="firewallRuleModal" tabindex="-1" aria-labelledby="firewallRuleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="firewallRuleModalLabel">Add Firewall Rule</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="firewall-rule-form">
+            <input type="hidden" id="rule-id" value="">
+            <div class="mb-3">
+              <label for="rule-type" class="form-label">Type</label>
+              <select id="rule-type" class="form-select" required>
+                <option value="TCP">TCP</option>
+                <option value="UDP">UDP</option>
+                <option value="ICMP">ICMP</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="port-range" class="form-label">Port Range</label>
+              <input type="text" class="form-control" id="port-range" placeholder="e.g., 80 or 8000-8999" required>
+              <small class="form-text text-muted">Single port or range (e.g., 80 or 8000-8999)</small>
+            </div>
+            <div class="mb-3">
+              <label for="ip-version" class="form-label">IP Version</label>
+              <select id="ip-version" class="form-select" required>
+                <option value="IPv4">IPv4</option>
+                <option value="IPv6">IPv6</option>
+                <option value="Both">Both</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="source-ip" class="form-label">Source</label>
+              <input type="text" class="form-control" id="source-ip" placeholder="e.g., 0.0.0.0/0 or specific IP" required>
+              <small class="form-text text-muted">Use 0.0.0.0/0 for all IPv4 or ::/0 for all IPv6</small>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" id="save-firewall-rule" class="btn btn-primary">Save Rule</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Refresh data every 60 seconds
+    let refreshInterval = setInterval(fetchServicesData, 60000);
+    
+    // Manual refresh button
+    document.getElementById('refresh-services').addEventListener('click', function() {
+      fetchServicesData();
+    });
+    
+    function fetchServicesData() {
+      fetch('/system/api/services')
+        .then(response => response.json())
+        .then(data => {
+          updateServices(data.services);
+          document.getElementById('last-updated').textContent = data.timestamp;
+        })
+        .catch(error => {
+          console.error('Error fetching services data:', error);
+        });
+    }
+    
+    function updateServices(services) {
+      const serviceList = document.getElementById('service-list');
+      serviceList.innerHTML = '';
+      
+      services.forEach(service => {
+        const row = document.createElement('tr');
+        const statusClass = service.status === 'running' ? 'status-running' : 'status-stopped';
+        const statusIcon = service.status === 'running' ? 'fa-check-circle' : 'fa-times-circle';
+        
+        let actionButtons = '';
+        if (service.status === 'running') {
+          actionButtons = `
+            <button class="btn btn-sm btn-warning stop-service" data-service="${service.name}">
+              <i class="fas fa-stop"></i> Stop
+            </button>
+            <button class="btn btn-sm btn-info restart-service" data-service="${service.name}">
+              <i class="fas fa-sync"></i> Restart
+            </button>
+          `;
+        } else {
+          actionButtons = `
+            <button class="btn btn-sm btn-success start-service" data-service="${service.name}">
+              <i class="fas fa-play"></i> Start
+            </button>
+          `;
+        }
+        
+        row.innerHTML = `
+          <td>
+            <span class="service-status ${statusClass}">
+              <i class="fas ${statusIcon}"></i>
+              ${service.status.toUpperCase()}
+            </span>
+          </td>
+          <td>${service.name}</td>
+          <td class="action-buttons">${actionButtons}</td>
+        `;
+        
+        serviceList.appendChild(row);
+      });
+      
+      // Rebind event handlers
+      bindServiceButtons();
+    }
+    
+    function bindServiceButtons() {
+      // Start service
+      document.querySelectorAll('.start-service').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const serviceName = this.getAttribute('data-service');
+          startService(serviceName);
+        });
+      });
+      
+      // Stop service
+      document.querySelectorAll('.stop-service').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const serviceName = this.getAttribute('data-service');
+          stopService(serviceName);
+        });
+      });
+      
+      // Restart service
+      document.querySelectorAll('.restart-service').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const serviceName = this.getAttribute('data-service');
+          restartService(serviceName);
+        });
+      });
+    }
+    
+    // Initial binding
+    bindServiceButtons();
+    
+    // Service control functions
+    function startService(serviceName) {
+      fetch('/system/api/services/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ service: serviceName })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          fetchServicesData();
+        } else {
+          alert('Error starting service: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    }
+    
+    function stopService(serviceName) {
+      fetch('/system/api/services/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ service: serviceName })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          fetchServicesData();
+        } else {
+          alert('Error stopping service: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    }
+    
+    function restartService(serviceName) {
+      fetch('/system/api/services/restart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ service: serviceName })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          fetchServicesData();
+        } else {
+          alert('Error restarting service: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    }
+    
+    // Firewall rule modal
+    const ruleModal = new bootstrap.Modal(document.getElementById('firewallRuleModal'));
+    
+    document.getElementById('add-firewall-rule').addEventListener('click', function() {
+      document.getElementById('firewallRuleModalLabel').textContent = 'Add Firewall Rule';
+      document.getElementById('rule-id').value = '';
+      document.getElementById('firewall-rule-form').reset();
+      ruleModal.show();
+    });
+    
+    document.querySelectorAll('.edit-rule').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const ruleId = this.getAttribute('data-rule-id');
+        document.getElementById('firewallRuleModalLabel').textContent = 'Edit Firewall Rule';
+        
+        // Fetch rule data
+        fetch(`/system/api/firewall/rule/${ruleId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const rule = data.rule;
+              document.getElementById('rule-id').value = rule.id;
+              document.getElementById('rule-type').value = rule.type;
+              document.getElementById('port-range').value = rule.port_range;
+              document.getElementById('ip-version').value = rule.ip_version;
+              document.getElementById('source-ip').value = rule.source;
+              ruleModal.show();
+            } else {
+              alert('Error fetching rule: ' + data.error);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+      });
+    });
+    
+    document.getElementById('save-firewall-rule').addEventListener('click', function() {
+      const ruleId = document.getElementById('rule-id').value;
+      const ruleData = {
+        type: document.getElementById('rule-type').value,
+        port_range: document.getElementById('port-range').value,
+        ip_version: document.getElementById('ip-version').value,
+        source: document.getElementById('source-ip').value
+      };
+      
+      const endpoint = ruleId ? `/system/api/firewall/rule/${ruleId}` : '/system/api/firewall/rule';
+      const method = ruleId ? 'PUT' : 'POST';
+      
+      fetch(endpoint, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(ruleData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          ruleModal.hide();
+          fetchServicesData();
+        } else {
+          alert('Error saving rule: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+    
+    document.querySelectorAll('.delete-rule').forEach(btn => {
+      btn.addEventListener('click', function() {
+        if (confirm('Are you sure you want to delete this rule?')) {
+          const ruleId = this.getAttribute('data-rule-id');
+          
+          fetch(`/system/api/firewall/rule/${ruleId}`, {
+            method: 'DELETE'
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              fetchServicesData();
+            } else {
+              alert('Error deleting rule: ' + data.error);
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+        }
+      });
+    });
+    
+    // Update timezone
+    document.getElementById('update-timezone').addEventListener('click', function() {
+      const timezone = document.getElementById('timezone-select').value;
+      
+      fetch('/system/api/timezone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ timezone: timezone })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('server-time').textContent = data.server_time;
+          alert('Timezone updated successfully');
+        } else {
+          alert('Error updating timezone: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+    
+    // Web server actions
+    document.getElementById('reload-web-server').addEventListener('click', function() {
+      if (confirm('Are you sure you want to reload the web server?')) {
+        fetch('/system/api/web-server/reload', {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Web server reloaded successfully');
+          } else {
+            alert('Error reloading web server: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+      }
+    });
+    
+    document.getElementById('clear-cache').addEventListener('click', function() {
+      if (confirm('Are you sure you want to clear the cache?')) {
+        fetch('/system/api/web-server/clear-cache', {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Cache cleared successfully');
+          } else {
+            alert('Error clearing cache: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+      }
+    });
+    
+    document.getElementById('update-port').addEventListener('click', function() {
+      const port = document.getElementById('server-port').value;
+      
+      fetch('/system/api/web-server/port', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ port: port })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Port updated. Server restart required for changes to take effect.');
+        } else {
+          alert('Error updating port: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+    
+    // Cloud settings
+    document.getElementById('cloud-enabled').addEventListener('change', function() {
+      const enabled = this.checked;
+      document.getElementById('cloud-provider').disabled = !enabled;
+      document.getElementById('cloud-region').disabled = !enabled;
+      document.getElementById('save-cloud-settings').disabled = !enabled;
+    });
+    
+    document.getElementById('save-cloud-settings').addEventListener('click', function() {
+      const enabled = document.getElementById('cloud-enabled').checked;
+      const provider = document.getElementById('cloud-provider').value;
+      const region = document.getElementById('cloud-region').value;
+      
+      fetch('/system/api/cloud', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          enabled: enabled,
+          provider: provider,
+          region: region
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Cloud settings saved successfully');
+        } else {
+          alert('Error saving cloud settings: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+    
+    // Backup configuration
+    document.getElementById('save-backup-config').addEventListener('click', function() {
+      const frequency = document.getElementById('backup-frequency').value;
+      const retention = document.getElementById('backup-retention').value;
+      const cloudSync = document.getElementById('backup-cloud').checked;
+      
+      fetch('/system/api/backup-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          frequency: frequency,
+          retention_days: retention,
+          cloud_sync: cloudSync
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Backup configuration saved successfully');
+        } else {
+          alert('Error saving backup configuration: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+    
+    // Basic auth
+    document.getElementById('basic-auth-enabled').addEventListener('change', function() {
+      const enabled = this.checked;
+      document.getElementById('basic-auth-username').disabled = !enabled;
+      document.getElementById('basic-auth-password').disabled = !enabled;
+      document.getElementById('save-basic-auth').disabled = !enabled;
+    });
+    
+    document.getElementById('save-basic-auth').addEventListener('click', function() {
+      const enabled = document.getElementById('basic-auth-enabled').checked;
+      const username = document.getElementById('basic-auth-username').value;
+      const password = document.getElementById('basic-auth-password').value;
+      
+      fetch('/system/api/security/basic-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          enabled: enabled,
+          username: username,
+          password: password
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Basic authentication settings saved successfully');
+          document.getElementById('basic-auth-password').value = '';
+        } else {
+          alert('Error saving basic authentication settings: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+    
+    // Security entrance
+    document.getElementById('save-security-entrance').addEventListener('click', function() {
+      const path = document.getElementById('security-entrance-path').value;
+      
+      fetch('/system/api/security/entrance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          path: path
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Security entrance path updated successfully');
+        } else {
+          alert('Error updating security entrance path: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+    
+    // IPv6 and IP restrictions
+    document.getElementById('save-ip-restrictions').addEventListener('click', function() {
+      const ipv6Enabled = document.getElementById('ipv6-enabled').checked;
+      const allowedIPs = document.getElementById('allowed-ips').value.split('\n').filter(ip => ip.trim());
+      
+      fetch('/system/api/security/ip-restrictions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ipv6_enabled: ipv6Enabled,
+          allowed_ips: allowedIPs
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('IP restrictions updated successfully');
+        } else {
+          alert('Error updating IP restrictions: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    });
+  });
+</script>
+{% endblock %} 

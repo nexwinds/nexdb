@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - NexDB Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h2>
+        <p class="text-muted">System and database status overview</p>
+    </div>
+</div>
+
+<!-- Status Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card {% if mysql_status %}bg-success{% else %}bg-danger{% endif %} text-white">
+            <div class="card-body text-center">
+                <h5><i class="fas fa-database me-2"></i>MySQL</h5>
+                <p class="mb-0">{% if mysql_status %}Running{% else %}Not Running{% endif %}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card {% if postgres_status %}bg-success{% else %}bg-danger{% endif %} text-white">
+            <div class="card-body text-center">
+                <h5><i class="fas fa-database me-2"></i>PostgreSQL</h5>
+                <p class="mb-0">{% if postgres_status %}Running{% else %}Not Running{% endif %}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h5><i class="fas fa-hdd me-2"></i>Disk Usage</h5>
+                <p class="mb-0">{{ system_info.disk_used }} GB / {{ system_info.disk_total }} GB</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h5><i class="fas fa-memory me-2"></i>Memory</h5>
+                <p class="mb-0">{{ system_info.memory_used }} GB / {{ system_info.memory_total }} GB</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Database Stats -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5><i class="fas fa-database me-2"></i>MySQL Databases</h5>
+            </div>
+            <div class="card-body">
+                {% if mysql_dbs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Database Name</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for db in mysql_dbs %}
+                            <tr>
+                                <td>{{ db }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('mysql.backup_database', db_name=db) }}" 
+                                       onclick="event.preventDefault(); document.getElementById('backup-form-{{ db }}').submit();"
+                                       class="btn btn-sm btn-primary">
+                                        <i class="fas fa-download me-1"></i>Backup
+                                    </a>
+                                    <form id="backup-form-{{ db }}" action="{{ url_for('mysql.backup_database', db_name=db) }}" method="post" class="d-none">
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center">No MySQL databases available.</p>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('mysql.index') }}" class="btn btn-primary">
+                    <i class="fas fa-cog me-1"></i>Manage MySQL
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5><i class="fas fa-database me-2"></i>PostgreSQL Databases</h5>
+            </div>
+            <div class="card-body">
+                {% if postgres_dbs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Database Name</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for db in postgres_dbs %}
+                            <tr>
+                                <td>{{ db }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('postgres.backup_database', db_name=db) }}" 
+                                       onclick="event.preventDefault(); document.getElementById('pg-backup-form-{{ db }}').submit();"
+                                       class="btn btn-sm btn-primary">
+                                        <i class="fas fa-download me-1"></i>Backup
+                                    </a>
+                                    <form id="pg-backup-form-{{ db }}" action="{{ url_for('postgres.backup_database', db_name=db) }}" method="post" class="d-none">
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center">No PostgreSQL databases available.</p>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('postgres.index') }}" class="btn btn-primary">
+                    <i class="fas fa-cog me-1"></i>Manage PostgreSQL
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Backups -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5><i class="fas fa-cloud-upload-alt me-2"></i>Recent Backups</h5>
+            </div>
+            <div class="card-body">
+                {% if backups %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Backup Name</th>
+                                <th>Size</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for backup in backups %}
+                            <tr>
+                                <td>{{ backup.name }}</td>
+                                <td>{{ backup.size }} MB</td>
+                                <td>{{ backup.date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center">No backups available.</p>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('backup.index') }}" class="btn btn-primary">
+                    <i class="fas fa-cloud-upload-alt me-1"></i>Manage Backups
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5><i class="fas fa-user me-2"></i>Users</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="border-bottom pb-2">MySQL Users</h6>
+                        {% if mysql_users %}
+                        <ul class="list-group">
+                            {% for user in mysql_users[:5] %}
+                            <li class="list-group-item">{{ user }}</li>
+                            {% endfor %}
+                            {% if mysql_users|length > 5 %}
+                            <li class="list-group-item text-center text-muted">
+                                <small>And {{ mysql_users|length - 5 }} more...</small>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        {% else %}
+                        <p>No MySQL users available.</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="border-bottom pb-2">PostgreSQL Users</h6>
+                        {% if postgres_users %}
+                        <ul class="list-group">
+                            {% for user in postgres_users[:5] %}
+                            <li class="list-group-item">{{ user }}</li>
+                            {% endfor %}
+                            {% if postgres_users|length > 5 %}
+                            <li class="list-group-item text-center text-muted">
+                                <small>And {{ postgres_users|length - 5 }} more...</small>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        {% else %}
+                        <p>No PostgreSQL users available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

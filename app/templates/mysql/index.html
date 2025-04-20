@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+
+{% block title %}MySQL Management - NexDB Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-database me-2"></i>MySQL Management</h2>
+        <p class="text-muted">Manage MySQL databases and users</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('mysql.create_database') }}" class="btn btn-primary me-2">
+            <i class="fas fa-plus-circle me-1"></i>New Database
+        </a>
+        <a href="{{ url_for('mysql.create_user') }}" class="btn btn-success">
+            <i class="fas fa-user-plus me-1"></i>New User
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Databases -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5><i class="fas fa-database me-2"></i>Databases</h5>
+            </div>
+            <div class="card-body">
+                {% if databases %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Database Name</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for db in databases %}
+                            <tr>
+                                <td>{{ db }}</td>
+                                <td class="text-end">
+                                    <!-- Backup Button -->
+                                    <a href="{{ url_for('mysql.backup_database', db_name=db) }}" 
+                                        onclick="event.preventDefault(); document.getElementById('backup-form-{{ db }}').submit();"
+                                        class="btn btn-sm btn-primary me-1">
+                                        <i class="fas fa-download me-1"></i>Backup
+                                    </a>
+                                    <form id="backup-form-{{ db }}" action="{{ url_for('mysql.backup_database', db_name=db) }}" method="post" class="d-none">
+                                    </form>
+                                    
+                                    <!-- Delete Button -->
+                                    <button type="button" class="btn btn-sm btn-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteModal" 
+                                            data-db-name="{{ db }}">
+                                        <i class="fas fa-trash-alt me-1"></i>Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center">No MySQL databases available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Users -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5><i class="fas fa-users me-2"></i>Users</h5>
+            </div>
+            <div class="card-body">
+                {% if users %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user }}</td>
+                                <td class="text-end">
+                                    <!-- Password Change Button -->
+                                    <button type="button" class="btn btn-sm btn-warning me-1" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#passwordModal" 
+                                            data-user-info="{{ user }}">
+                                        <i class="fas fa-key me-1"></i>Password
+                                    </button>
+                                    
+                                    <!-- Delete Button -->
+                                    <button type="button" class="btn btn-sm btn-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteUserModal" 
+                                            data-user-info="{{ user }}">
+                                        <i class="fas fa-trash-alt me-1"></i>Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center">No MySQL users available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Database Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Delete Database</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the database <strong id="dbNameToDelete"></strong>?</p>
+                <p class="text-danger">This action cannot be undone!</p>
+                
+                <form id="deleteForm" method="post" action="">
+                    <div class="mb-3">
+                        <label for="confirmDbName" class="form-label">Type the database name to confirm deletion:</label>
+                        <input type="text" class="form-control" id="confirmDbName" name="confirm" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete" disabled>Delete Database</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-key me-2"></i>Change Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{{ url_for('mysql.change_password') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="userInfoInput" name="user_info" value="">
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="newPassword" name="new_password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete User Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Delete User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{{ url_for('mysql.delete_user') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="userInfoDeleteInput" name="user_info" value="">
+                    <p>Are you sure you want to delete the user <strong id="userNameToDelete"></strong>?</p>
+                    <p class="text-danger">This action cannot be undone!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Database delete confirmation
+    document.getElementById('deleteModal').addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var dbName = button.getAttribute('data-db-name');
+        var modalTitle = this.querySelector('#dbNameToDelete');
+        var deleteForm = document.getElementById('deleteForm');
+        var confirmInput = document.getElementById('confirmDbName');
+        var confirmButton = document.getElementById('confirmDelete');
+        
+        modalTitle.textContent = dbName;
+        deleteForm.action = "{{ url_for('mysql.delete_database', db_name='') }}" + dbName;
+        
+        // Reset confirm input
+        confirmInput.value = '';
+        confirmButton.disabled = true;
+        
+        // Enable confirm button only if input matches database name
+        confirmInput.addEventListener('input', function() {
+            confirmButton.disabled = (this.value !== dbName);
+        });
+        
+        // Submit form when confirm button is clicked
+        confirmButton.onclick = function() {
+            if (confirmInput.value === dbName) {
+                deleteForm.submit();
+            }
+        };
+    });
+    
+    // User password change
+    document.getElementById('passwordModal').addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var userInfo = button.getAttribute('data-user-info');
+        var userInfoInput = this.querySelector('#userInfoInput');
+        
+        userInfoInput.value = userInfo;
+    });
+    
+    // User delete confirmation
+    document.getElementById('deleteUserModal').addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var userInfo = button.getAttribute('data-user-info');
+        var userNameToDelete = this.querySelector('#userNameToDelete');
+        var userInfoDeleteInput = this.querySelector('#userInfoDeleteInput');
+        
+        userNameToDelete.textContent = userInfo;
+        userInfoDeleteInput.value = userInfo;
+    });
+</script>
+{% endblock %} 

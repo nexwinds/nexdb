@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% from 'backup/components/modals.html' import create_backup_modal, schedule_backup_modal, upload_to_s3_modal, download_from_s3_modal, delete_local_backup_modal, delete_s3_backup_modal, cancel_scheduled_backup_modal %}
+
+{% block title %}Backup Management - NexDB Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-cloud-upload-alt me-2"></i>Backup Management</h2>
+        <p class="text-muted">Manage database backups and scheduled backup jobs</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBackupModal">
+            <i class="fas fa-plus-circle me-1"></i>Create Backup
+        </button>
+        <button type="button" class="btn btn-success ms-2" data-bs-toggle="modal" data-bs-target="#scheduleBackupModal">
+            <i class="fas fa-calendar-alt me-1"></i>Schedule Backup
+        </button>
+    </div>
+</div>
+
+<!-- Local Backups & Scheduled Backups -->
+<div class="row">
+    <!-- Local Backups -->
+    <div class="col-md-8 mb-4">
+        {% include 'backup/components/local_backups.html' %}
+    </div>
+    
+    <!-- Scheduled Backups -->
+    <div class="col-md-4 mb-4">
+        {% include 'backup/components/scheduled_backups.html' %}
+    </div>
+</div>
+
+<!-- S3 Backups -->
+<div class="row">
+    <div class="col-md-12 mb-4">
+        {% include 'backup/components/s3_backups.html' %}
+    </div>
+</div>
+
+<!-- Include all modals -->
+{{ create_backup_modal() }}
+{{ schedule_backup_modal() }}
+{{ upload_to_s3_modal() }}
+{{ download_from_s3_modal() }}
+{{ delete_local_backup_modal() }}
+{{ delete_s3_backup_modal() }}
+{{ cancel_scheduled_backup_modal() }}
+{% endblock %}
+
+{% block scripts %}
+{% include 'backup/components/scripts.html' %}
+{% endblock %} 

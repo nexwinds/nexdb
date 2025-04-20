@@ -1,0 +1,49 @@
+<!-- Scheduled Backups Component -->
+<div class="card">
+    <div class="card-header bg-light">
+        <h5><i class="fas fa-calendar-alt me-2"></i>Scheduled Backups</h5>
+    </div>
+    <div class="card-body">
+        {% if scheduler_status %}
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle me-1"></i> Scheduler is running
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-1"></i> Scheduler is not running
+        </div>
+        {% endif %}
+        
+        {% if scheduled_backups %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Frequency</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in scheduled_backups %}
+                    <tr>
+                        <td>{{ job.name }}</td>
+                        <td>{{ job.frequency }}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger"
+                                data-bs-toggle="modal"
+                                data-bs-target="#cancelScheduledBackupModal"
+                                data-job-id="{{ job.id }}">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center">No scheduled backups.</p>
+        {% endif %}
+    </div>
+</div> 

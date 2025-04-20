@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Create MySQL Database - NexDB Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2><i class="fas fa-database me-2"></i>Create MySQL Database</h2>
+        <p class="text-muted">Create a new MySQL database and optionally assign a user</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-plus-circle me-2"></i>New Database</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('mysql.create_database') }}">
+                    <!-- Database Name -->
+                    <div class="mb-3">
+                        <label for="db_name" class="form-label">Database Name</label>
+                        <input type="text" class="form-control" id="db_name" name="db_name" required>
+                        <small class="text-muted">Lowercase letters, numbers, and underscores only.</small>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Create User Option -->
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="create_user" name="create_user">
+                        <label class="form-check-label" for="create_user">
+                            Create and assign a new user to this database
+                        </label>
+                    </div>
+                    
+                    <!-- User Details (shown conditionally) -->
+                    <div id="user_details" style="display: none;">
+                        <div class="mb-3">
+                            <label for="user_name" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="user_name" name="user_name">
+                        </div>
+                        <div class="mb-3">
+                            <label for="user_password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="user_password" name="user_password">
+                            <small class="text-muted">Use a strong password with at least 8 characters.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('mysql.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Create Database
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Show/hide user details based on checkbox
+    document.getElementById('create_user').addEventListener('change', function() {
+        var userDetails = document.getElementById('user_details');
+        userDetails.style.display = this.checked ? 'block' : 'none';
+        
+        // Toggle required attribute based on visibility
+        var userInputs = userDetails.querySelectorAll('input');
+        userInputs.forEach(function(input) {
+            input.required = userDetails.style.display === 'block';
+        });
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Database Explorer - NexDB Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-database me-2"></i>Database Explorer</h2>
+        <p class="text-muted">Explore and manage your database tables and data</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('database.db_explorer.run_query', db_type=db_type, db_name=db_name) }}" class="btn btn-primary">
+                <i class="fas fa-terminal me-1"></i>Run SQL Query
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left sidebar for databases -->
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-database me-2"></i>Databases</h5>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-server me-1"></i>{{ db_type|upper }}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item {% if db_type == 'mysql' %}active{% endif %}" href="{{ url_for('database.db_explorer.index', db_type='mysql') }}">MySQL</a></li>
+                        <li><a class="dropdown-item {% if db_type == 'postgres' %}active{% endif %}" href="{{ url_for('database.db_explorer.index', db_type='postgres') }}">PostgreSQL</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="list-group list-group-flush" style="max-height: 500px; overflow-y: auto;">
+                {% for database in databases %}
+                <a href="{{ url_for('database.db_explorer.index', db_type=db_type, db_name=database.name) }}" 
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if database.name == db_name %}active{% endif %}">
+                    <div>
+                        <i class="fas fa-database me-2"></i>{{ database.name }}
+                    </div>
+                    <small class="text-muted">{{ database.size }}</small>
+                </a>
+                {% else %}
+                <div class="list-group-item">No databases found</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right content area for tables -->
+    <div class="col-md-9">
+        {% if db_name %}
+        <div class="card">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-table me-2"></i>Tables in {{ db_name }}</h5>
+                <input type="text" id="tableSearch" class="form-control form-control-sm w-25" placeholder="Search tables...">
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Table Name</th>
+                            <th>Rows</th>
+                            <th>Size</th>
+                            <th>Engine</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablesTable">
+                        {% for table in tables %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('database.db_explorer.view_table', db_type=db_type, db_name=db_name, table_name=table.name) }}">
+                                    <i class="fas fa-table me-1"></i>{{ table.name }}
+                                </a>
+                            </td>
+                            <td>{{ table.rows }}</td>
+                            <td>{{ table.size }}</td>
+                            <td>{{ table.engine or '-' }}</td>
+                            <td>{{ table.created or '-' }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('database.db_explorer.view_table', db_type=db_type, db_name=db_name, table_name=table.name) }}" 
+                                       class="btn btn-outline-primary" title="Browse">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('database.db_explorer.edit_record', db_type=db_type, db_name=db_name, table_name=table.name) }}" 
+                                       class="btn btn-outline-success" title="Add record">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" 
+                                            onclick="confirmTableDrop('{{ table.name }}')" title="Drop table">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center">No tables found in the selected database.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>Select a database from the sidebar to view its tables.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Drop Table Confirmation Modal -->
+<div class="modal fade" id="dropTableModal" tabindex="-1" aria-labelledby="dropTableModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="dropTableModalLabel">Drop Table</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to drop the table <strong id="tableNameToDelete"></strong>?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>This action will permanently delete the table and all its data!</p>
+                
+                <form id="dropTableForm" method="post" action="{{ url_for('database.db_explorer.drop_table') }}">
+                    <input type="hidden" name="db_type" value="{{ db_type }}">
+                    <input type="hidden" name="db_name" value="{{ db_name }}">
+                    <input type="hidden" name="table_name" id="dropTableName">
+                    <div class="mb-3">
+                        <label for="confirmTableName" class="form-label">Type the table name to confirm:</label>
+                        <input type="text" class="form-control" id="confirmTableName" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDropTable" disabled>Drop Table</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Table search functionality
+    document.getElementById('tableSearch').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const tableRows = document.querySelectorAll('#tablesTable tr');
+        
+        tableRows.forEach(row => {
+            const tableName = row.querySelector('td:first-child')?.textContent.toLowerCase() || '';
+            row.style.display = tableName.includes(searchTerm) ? '' : 'none';
+        });
+    });
+    
+    // Drop table confirmation
+    function confirmTableDrop(tableName) {
+        const modal = document.getElementById('dropTableModal');
+        const tableNameEl = document.getElementById('tableNameToDelete');
+        const dropTableNameInput = document.getElementById('dropTableName');
+        const confirmInput = document.getElementById('confirmTableName');
+        const confirmButton = document.getElementById('confirmDropTable');
+        
+        tableNameEl.textContent = tableName;
+        dropTableNameInput.value = tableName;
+        confirmInput.value = '';
+        confirmButton.disabled = true;
+        
+        // Show modal
+        const modalInstance = new bootstrap.Modal(modal);
+        modalInstance.show();
+        
+        // Enable confirm button only if input matches table name
+        confirmInput.addEventListener('input', function() {
+            confirmButton.disabled = (this.value !== tableName);
+        });
+        
+        // Submit form when confirm button is clicked
+        confirmButton.onclick = function() {
+            if (confirmInput.value === tableName) {
+                document.getElementById('dropTableForm').submit();
+            }
+        };
+    }
+</script>
+{% endblock %} 

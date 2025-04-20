@@ -1,0 +1,237 @@
+{% macro create_backup_modal() %}
+<!-- Create Backup Modal -->
+<div class="modal fade" id="createBackupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Create Backup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{{ url_for('backup.backup_and_upload') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="db_type" class="form-label">Database Type</label>
+                        <select class="form-select" id="db_type" name="db_type" required>
+                            <option value="">Select database type</option>
+                            <option value="mysql">MySQL</option>
+                            <option value="postgres">PostgreSQL</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="db_name" class="form-label">Database Name</label>
+                        <select class="form-select" id="db_name" name="db_name" required>
+                            <option value="">Select database</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="upload_to_s3" name="upload_to_s3" 
+                            {% if not aws_configured %}disabled{% endif %}>
+                        <label class="form-check-label" for="upload_to_s3">
+                            Upload to S3 after backup
+                        </label>
+                        {% if not aws_configured %}
+                        <small class="text-muted d-block">S3 upload disabled because AWS credentials are not configured.</small>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Backup</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro schedule_backup_modal() %}
+<!-- Schedule Backup Modal -->
+<div class="modal fade" id="scheduleBackupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-calendar-alt me-2"></i>Schedule Backup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{{ url_for('backup.schedule_backup') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="db_type_schedule" class="form-label">Database Type</label>
+                        <select class="form-select" id="db_type_schedule" name="db_type" required>
+                            <option value="">Select database type</option>
+                            <option value="mysql">MySQL</option>
+                            <option value="postgres">PostgreSQL</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="db_name_schedule" class="form-label">Database Name</label>
+                        <select class="form-select" id="db_name_schedule" name="db_name" required>
+                            <option value="">Select database</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="frequency" class="form-label">Backup Frequency</label>
+                        <select class="form-select" id="frequency" name="frequency" required>
+                            <option value="">Select frequency</option>
+                            <option value="hourly">Hourly</option>
+                            <option value="daily">Daily (at midnight)</option>
+                            <option value="weekly">Weekly (Monday at midnight)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="upload_to_s3_schedule" name="upload_to_s3" 
+                            {% if not aws_configured %}disabled{% endif %}>
+                        <label class="form-check-label" for="upload_to_s3_schedule">
+                            Upload to S3 after backup
+                        </label>
+                        {% if not aws_configured %}
+                        <small class="text-muted d-block">S3 upload disabled because AWS credentials are not configured.</small>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Schedule Backup</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro upload_to_s3_modal() %}
+<!-- Upload to S3 Modal -->
+<div class="modal fade" id="uploadToS3Modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-cloud-upload-alt me-2"></i>Upload to S3</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{{ url_for('backup.upload_to_s3') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="backupFileInput" name="backup_file" value="">
+                    <p>Are you sure you want to upload <strong id="backupFileName"></strong> to S3?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro download_from_s3_modal() %}
+<!-- Download from S3 Modal -->
+<div class="modal fade" id="downloadFromS3Modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-cloud-download-alt me-2"></i>Download from S3</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{{ url_for('backup.download_from_s3') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="s3ObjectInput" name="s3_object" value="">
+                    <p>Are you sure you want to download <strong id="s3ObjectName"></strong> from S3?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Download</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro delete_local_backup_modal() %}
+<!-- Delete Local Backup Modal -->
+<div class="modal fade" id="deleteLocalBackupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Delete Local Backup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{{ url_for('backup.delete_local_backup') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="deleteBackupFileInput" name="backup_file" value="">
+                    <p>Are you sure you want to delete the local backup <strong id="deleteBackupFileName"></strong>?</p>
+                    <p class="text-danger">This action cannot be undone!</p>
+                    
+                    <div class="mb-3">
+                        <label for="confirmDeleteLocal" class="form-label">Type the backup name to confirm deletion:</label>
+                        <input type="text" class="form-control" id="confirmDeleteLocal" name="confirm" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete Backup</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro delete_s3_backup_modal() %}
+<!-- Delete S3 Backup Modal -->
+<div class="modal fade" id="deleteS3BackupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Delete S3 Backup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{{ url_for('backup.delete_s3_backup') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="deleteS3ObjectInput" name="s3_object" value="">
+                    <p>Are you sure you want to delete the S3 backup <strong id="deleteS3ObjectName"></strong>?</p>
+                    <p class="text-danger">This action cannot be undone!</p>
+                    
+                    <div class="mb-3">
+                        <label for="confirmDeleteS3" class="form-label">Type the backup name to confirm deletion:</label>
+                        <input type="text" class="form-control" id="confirmDeleteS3" name="confirm" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete Backup</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro cancel_scheduled_backup_modal() %}
+<!-- Cancel Scheduled Backup Modal -->
+<div class="modal fade" id="cancelScheduledBackupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-calendar-times me-2"></i>Cancel Scheduled Backup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{{ url_for('backup.cancel_scheduled_backup') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="jobIdInput" name="job_id" value="">
+                    <p>Are you sure you want to cancel this scheduled backup?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endmacro %} 

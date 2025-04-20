@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Edit' if primary_key else 'Add' }} Record - {{ table_name }} - NexDB Manager{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('database.db_explorer.index') }}">Database Explorer</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('database.db_explorer.index', db_type=db_type, db_name=db_name) }}">{{ db_name }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('database.db_explorer.view_table', db_type=db_type, db_name=db_name, table_name=table_name) }}">{{ table_name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ 'Edit' if primary_key else 'Add' }} Record</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="card">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <i class="fas {% if primary_key %}fa-edit{% else %}fa-plus-circle{% endif %} me-2"></i>
+            {{ 'Edit' if primary_key else 'Add' }} Record in {{ table_name }}
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            <input type="hidden" name="db_type" value="{{ db_type }}">
+            <input type="hidden" name="db_name" value="{{ db_name }}">
+            <input type="hidden" name="table_name" value="{{ table_name }}">
+            <input type="hidden" name="primary_key" value="{{ primary_key }}">
+            <input type="hidden" name="primary_value" value="{{ primary_value }}">
+            
+            {% for field in structure %}
+            <div class="mb-3 row">
+                <label for="field-{{ field.name }}" class="col-sm-3 col-form-label">
+                    {{ field.name }}
+                    {% if field.primary_key %}
+                    <span class="badge bg-warning text-dark ms-1" title="Primary Key">PK</span>
+                    {% endif %}
+                    {% if not field.nullable %}
+                    <span class="text-danger">*</span>
+                    {% endif %}
+                </label>
+                <div class="col-sm-9">
+                    {% set field_value = record[field.name] if record and field.name in record else '' %}
+                    
+                    {% if field.type == 'text' or field.type.startswith('longtext') %}
+                    <!-- Text area for large text fields -->
+                    <textarea class="form-control" id="field-{{ field.name }}" name="{{ field.name }}" rows="5"
+                              {% if field.primary_key and primary_key %}readonly{% endif %}
+                              {% if not field.nullable %}required{% endif %}>{{ field_value }}</textarea>
+                              
+                    {% elif field.type.startswith('enum') or field.type.startswith('set') %}
+                    <!-- Select for enum/set types -->
+                    {% set options = field.type[5:-1].replace("'", "").split(',') %}
+                    <select class="form-select" id="field-{{ field.name }}" name="{{ field.name }}"
+                            {% if field.primary_key and primary_key %}disabled{% endif %}
+                            {% if not field.nullable %}required{% endif %}>
+                        {% if field.nullable %}
+                        <option value="NULL" {% if field_value is none %}selected{% endif %}>NULL</option>
+                        {% endif %}
+                        {% for option in options %}
+                        <option value="{{ option }}" {% if field_value == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    {% elif field.type == 'tinyint(1)' %}
+                    <!-- Checkbox for boolean fields -->
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="field-{{ field.name }}" name="{{ field.name }}" value="1"
+                               {% if field_value == 1 or field_value == '1' or field_value == 'true' %}checked{% endif %}
+                               {% if field.primary_key and primary_key %}disabled{% endif %}>
+                        <label class="form-check-label" for="field-{{ field.name }}">{{ 'Yes' if field_value else 'No' }}</label>
+                    </div>
+                    
+                    {% elif field.type.startswith('date') %}
+                    <!-- Date/time input for date fields -->
+                    <input type="{% if field.type == 'date' %}date{% elif field.type == 'time' %}time{% elif field.type == 'datetime' or field.type == 'timestamp' %}datetime-local{% else %}text{% endif %}" 
+                           class="form-control" id="field-{{ field.name }}" name="{{ field.name }}" 
+                           value="{{ field_value }}"
+                           {% if field.primary_key and primary_key %}readonly{% endif %}
+                           {% if not field.nullable %}required{% endif %}>
+                           
+                    {% else %}
+                    <!-- Default input for other types -->
+                    <input type="text" class="form-control" id="field-{{ field.name }}" name="{{ field.name }}" 
+                           value="{{ field_value }}"
+                           {% if field.primary_key and primary_key %}readonly{% endif %}
+                           {% if not field.nullable %}required{% endif %}>
+                    {% endif %}
+                    
+                    {% if field.nullable %}
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" id="null-{{ field.name }}" 
+                               {% if field_value is none %}checked{% endif %}
+                               {% if field.primary_key %}disabled{% endif %}
+                               onchange="toggleNullValue('{{ field.name }}', this.checked)">
+                        <label class="form-check-label" for="null-{{ field.name }}">
+                            Set as NULL
+                        </label>
+                    </div>
+                    {% endif %}
+                    
+                    <small class="form-text text-muted">
+                        {{ field.type }} 
+                        {% if field.default is not none %} Default: {{ field.default }}{% endif %}
+                    </small>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{{ url_for('database.db_explorer.view_table', db_type=db_type, db_name=db_name, table_name=table_name) }}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas {% if primary_key %}fa-save{% else %}fa-plus-circle{% endif %} me-1"></i>
+                    {{ 'Save Changes' if primary_key else 'Add Record' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Function to toggle NULL value for a field
+    function toggleNullValue(fieldName, isNull) {
+        const field = document.getElementById('field-' + fieldName);
+        
+        if (isNull) {
+            field.setAttribute('disabled', 'disabled');
+            
+            // Create a hidden input to send NULL value
+            if (!document.getElementById('hidden-' + fieldName)) {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = fieldName;
+                hiddenInput.id = 'hidden-' + fieldName;
+                hiddenInput.value = 'NULL';
+                field.parentNode.appendChild(hiddenInput);
+            }
+        } else {
+            field.removeAttribute('disabled');
+            
+            // Remove hidden input if exists
+            const hiddenInput = document.getElementById('hidden-' + fieldName);
+            if (hiddenInput) {
+                hiddenInput.parentNode.removeChild(hiddenInput);
+            }
+        }
+    }
+    
+    // Initialize NULL toggles on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const nullCheckboxes = document.querySelectorAll('input[id^="null-"]');
+        nullCheckboxes.forEach(function(checkbox) {
+            if (checkbox.checked) {
+                const fieldName = checkbox.id.replace('null-', '');
+                toggleNullValue(fieldName, true);
+            }
+        });
+    });
+</script>
+{% endblock %} 
