@@ -2,13 +2,13 @@
 
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.7%2B-blue" alt="Python 3.7+">
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License MIT">
-  <img src="https://img.shields.io/badge/Database-MySQL%20%7C%20PostgreSQL-orange" alt="MySQL & PostgreSQL">
+  <img src="https://img.shields.io/badge/License-Custom-green" alt="Custom License">
+  <img src="https://img.shields.io/badge/Database-MySQL%208-orange" alt="MySQL 8">
   <img src="https://img.shields.io/badge/Storage-AWS%20S3-yellow" alt="AWS S3">
 </div>
 
 <p align="center">
-  <b>A powerful yet minimal database management interface for MySQL and PostgreSQL with integrated S3 backups</b>
+  <b>A powerful yet minimal database management interface for MySQL with integrated S3 backups</b>
 </p>
 
 **NEXDB** is a focused web panel for database administrators and developers who need a clean, streamlined interface for managing databases without bloat. It provides essential tools for database administration, browsing, querying, and automated backup management.
@@ -18,7 +18,7 @@
 ### 🗄️ Database Management
 
 - **Complete Administrative Control**
-  - Create, edit, and delete MySQL/PostgreSQL databases
+  - Create, edit, and delete MySQL databases
   - Manage database users and permissions
   - Monitor connection status and performance metrics
 
@@ -30,7 +30,8 @@
   - Manage table structure and perform operations like truncate/drop
 
 - **Multi-Database Support**
-  - Seamlessly switch between MySQL and PostgreSQL databases
+  - Core support for MySQL 8
+  - Optional PostgreSQL support configurable via dashboard
   - Consistent interface for both database types
   - Type-specific features where appropriate
 
@@ -76,88 +77,50 @@
 
 ### Prerequisites
 
-- Python 3.7+
-- MySQL and/or PostgreSQL server
-- AWS credentials (for S3 backups)
-- Web server (optional for production)
+- Ubuntu 24.04 or higher
+- Root access to your server
+- Fresh VPS installation recommended
 
-### Quick Installation
+### One-Line Installation
 
 ```bash
-wget -O install.sh https://raw.githubusercontent.com/nexwinds/nexdb/main/install.sh
-chmod +x install.sh
-sudo ./install.sh
+wget -qO- https://raw.githubusercontent.com/nexwinds/nexdb/main/install.sh | sudo bash
 ```
 
-### Manual Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/nexwinds/nexdb.git
-   cd nexdb
-   ```
-
-2. **Set up a virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database credentials and AWS settings
-   ```
-
-5. **Initialize the application:**
-   ```bash
-   flask init-db  # Creates necessary tables for NEXDB
-   flask create-admin  # Creates admin user account
-   ```
-
-6. **Run the development server:**
-   ```bash
-   python run.py
-   # or
-   flask run
-   ```
-
-7. **Access the application:**
-   Open your browser and navigate to http://localhost:5000
+This will:
+1. Check if your system meets the requirements (Ubuntu 24+)
+2. Install MySQL 8 and configure it securely
+3. Set up NEXDB with an admin account
+4. Configure the database connection
+5. Display the access credentials when complete
 
 ## 🔧 Configuration
 
-### Database Connections
+All configuration can be managed through the NEXDB dashboard after installation. 
 
-Edit `.env` to configure your database connections:
+### PostgreSQL Installation
 
-```
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=your_mysql_password
+PostgreSQL can be installed directly from the system dashboard:
 
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_postgres_password
-```
+1. Navigate to "System" → "Dashboard"
+2. In the "Services Status" section, find the PostgreSQL row
+3. If PostgreSQL is not installed, click the "Install PostgreSQL" button
+4. The system will install PostgreSQL, configure it with secure defaults, and display the credentials
+5. These credentials will be automatically saved in the NEXDB configuration
+
+The PostgreSQL installation process:
+- Installs PostgreSQL server and client packages
+- Starts and enables the PostgreSQL service
+- Sets a secure random password for the 'postgres' user
+- Automatically configures NEXDB to connect to the local PostgreSQL server
 
 ### AWS S3 Backup Configuration
 
-Configure S3 backups in `.env`:
+Configure S3 backups in the dashboard:
 
-```
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-east-1
-AWS_BUCKET_NAME=your-backup-bucket
-```
+1. Go to "Settings" → "Backup Configuration"
+2. Enter your AWS credentials and bucket details
+3. Save the configuration
 
 ## 🖥️ Usage Guide
 
@@ -219,7 +182,6 @@ AWS_BUCKET_NAME=your-backup-bucket
 - CSRF tokens protect against cross-site request forgery
 - All user inputs are sanitized to prevent SQL injection
 - Optional IP restriction for additional security
-- Sensitive configuration stored in environment variables
 
 ## 🛣️ Roadmap
 
@@ -242,7 +204,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under a custom license by Nexwinds Solutions Lda - see the LICENSE.md file for details. The license permits private use and modification but has specific conditions for commercial use, distribution, and attribution.
 
 ## 🙏 Acknowledgements
 

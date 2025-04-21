@@ -99,52 +99,38 @@ include 'includes/header.php';
             
             <h3>Minimum Requirements</h3>
             <ul>
-                <li>Node.js 14.x or later</li>
-                <li>NPM 6.x or later</li>
+                <li>Ubuntu 24.04 or higher</li>
+                <li>Python 3.7+</li>
                 <li>2GB RAM (4GB recommended)</li>
                 <li>Modern web browser (Chrome, Firefox, Safari, Edge)</li>
+                <li>Root access to your server</li>
             </ul>
             
             <h3>Supported Database Systems</h3>
             <ul>
-                <li>MySQL 5.7+ / MariaDB 10.3+</li>
-                <li>PostgreSQL 10+</li>
-                <li>MongoDB 4.2+</li>
-                <li>SQLite 3.x</li>
+                <li>MySQL 8+ (installed by default)</li>
+                <li>PostgreSQL 10+ (optional, can be installed via dashboard)</li>
             </ul>
             
             <h3>Optional Requirements</h3>
             <ul>
                 <li>AWS account (for S3 backup functionality)</li>
-                <li>Redis (for enhanced caching)</li>
             </ul>
             
             <div class="alert alert-info">
                 <div class="alert-title">
                     <i class="fas fa-info-circle"></i> Note
                 </div>
-                <p>For production use, we recommend using NEXDB on a dedicated server or instance for optimal performance and security.</p>
+                <p>For production use, we recommend using NEXDB on a fresh VPS or dedicated server for optimal performance and security.</p>
             </div>
         </section>
 
         <section id="installation">
             <h2>Installation</h2>
-            <p>NEXDB can be installed in several ways depending on your requirements and environment. Choose the method that works best for your setup.</p>
+            <p>NEXDB can be installed with a simple one-line command on Ubuntu systems.</p>
             
-            <h3>Global NPM Installation</h3>
-            <p>The simplest way to install NEXDB is through NPM:</p>
-            
-            <div class="code-block">
-                <div class="code-header">
-                    <span class="code-title">Terminal</span>
-                    <button class="copy-btn">Copy</button>
-                </div>
-                <div class="code-content">
-                    <pre>npm install -g nexdb</pre>
-                </div>
-            </div>
-            
-            <p>After installation, you can start NEXDB with the following command:</p>
+            <h3>One-Line Installation</h3>
+            <p>The simplest way to install NEXDB is through our installation script:</p>
             
             <div class="code-block">
                 <div class="code-header">
@@ -152,80 +138,24 @@ include 'includes/header.php';
                     <button class="copy-btn">Copy</button>
                 </div>
                 <div class="code-content">
-                    <pre>nexdb start</pre>
+                    <pre>wget -qO- https://raw.githubusercontent.com/nexwinds/nexdb/main/install.sh | sudo bash</pre>
                 </div>
             </div>
             
-            <h3>Docker Installation</h3>
-            <p>For containerized environments, you can use the official NEXDB Docker image:</p>
-            
-            <div class="code-block">
-                <div class="code-header">
-                    <span class="code-title">Terminal</span>
-                    <button class="copy-btn">Copy</button>
-                </div>
-                <div class="code-content">
-                    <pre>docker pull nexdb/nexdb:latest
-docker run -p 8080:8080 -v nexdb-data:/data nexdb/nexdb:latest</pre>
-                </div>
-            </div>
-            
-            <h3>Manual Installation</h3>
-            <p>For manual installation, follow these steps:</p>
-            
+            <p>This will:</p>
             <ol>
-                <li>Clone the repository:
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-title">Terminal</span>
-                            <button class="copy-btn">Copy</button>
-                        </div>
-                        <div class="code-content">
-                            <pre>git clone https://github.com/nexdb/nexdb.git
-cd nexdb</pre>
-                        </div>
-                    </div>
-                </li>
-                <li>Install dependencies:
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-title">Terminal</span>
-                            <button class="copy-btn">Copy</button>
-                        </div>
-                        <div class="code-content">
-                            <pre>npm install</pre>
-                        </div>
-                    </div>
-                </li>
-                <li>Build the application:
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-title">Terminal</span>
-                            <button class="copy-btn">Copy</button>
-                        </div>
-                        <div class="code-content">
-                            <pre>npm run build</pre>
-                        </div>
-                    </div>
-                </li>
-                <li>Start the application:
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-title">Terminal</span>
-                            <button class="copy-btn">Copy</button>
-                        </div>
-                        <div class="code-content">
-                            <pre>npm start</pre>
-                        </div>
-                    </div>
-                </li>
+                <li>Check if your system meets the requirements (Ubuntu 24+)</li>
+                <li>Install MySQL 8 and configure it securely</li>
+                <li>Set up NEXDB with an admin account</li>
+                <li>Configure the database connection</li>
+                <li>Display the access credentials when complete</li>
             </ol>
             
             <div class="alert alert-warning">
                 <div class="alert-title">
                     <i class="fas fa-exclamation-triangle"></i> Warning
                 </div>
-                <p>Some installation steps may require root or administrator privileges. Make sure you have the necessary permissions before proceeding.</p>
+                <p>Installation requires root privileges. Make sure you have sudo access before proceeding.</p>
             </div>
         </section>
 
@@ -234,36 +164,8 @@ cd nexdb</pre>
             <h2>Quick Start Guide</h2>
             <p>After installing NEXDB, follow these steps to get started:</p>
             
-            <h3>1. Initialize Configuration</h3>
-            <p>Run the initialization command to set up your configuration:</p>
-            
-            <div class="code-block">
-                <div class="code-header">
-                    <span class="code-title">Terminal</span>
-                    <button class="copy-btn">Copy</button>
-                </div>
-                <div class="code-content">
-                    <pre>nexdb init</pre>
-                </div>
-            </div>
-            
-            <p>This will guide you through setting up the initial configuration, including database connections and security settings.</p>
-            
-            <h3>2. Start the Server</h3>
-            <p>Start the NEXDB server:</p>
-            
-            <div class="code-block">
-                <div class="code-header">
-                    <span class="code-title">Terminal</span>
-                    <button class="copy-btn">Copy</button>
-                </div>
-                <div class="code-content">
-                    <pre>nexdb start</pre>
-                </div>
-            </div>
-            
-            <h3>3. Access the Web Interface</h3>
-            <p>Open your browser and navigate to:</p>
+            <h3>1. Access the Web Interface</h3>
+            <p>Open your browser and navigate to the URL shown at the end of the installation:</p>
             
             <div class="code-block">
                 <div class="code-header">
@@ -271,24 +173,67 @@ cd nexdb</pre>
                     <button class="copy-btn">Copy</button>
                 </div>
                 <div class="code-content">
-                    <pre>http://localhost:8080</pre>
+                    <pre>http://YOUR_SERVER_IP:5000</pre>
                 </div>
             </div>
             
-            <p>Log in with the default credentials:</p>
+            <p>Log in with the credentials provided during installation:</p>
             <ul>
                 <li><strong>Username:</strong> admin</li>
-                <li><strong>Password:</strong> nexdb (You'll be prompted to change this on first login)</li>
+                <li><strong>Password:</strong> [generated during installation]</li>
             </ul>
             
-            <h3>4. Add Your First Database Connection</h3>
-            <p>After logging in, click on "Connections" in the sidebar and then "Add New Connection" to set up your first database connection.</p>
+            <h3>2. Explore the Dashboard</h3>
+            <p>The dashboard provides an overview of your system resources, database status, and recent backups.</p>
+            
+            <h3>3. Install PostgreSQL (Optional)</h3>
+            <p>If you need PostgreSQL in addition to the default MySQL installation:</p>
+            <ol>
+                <li>Navigate to "System" → "Dashboard"</li>
+                <li>In the "Services Status" section, find the PostgreSQL row</li>
+                <li>If PostgreSQL is not installed, click the "Install PostgreSQL" button</li>
+                <li>The system will install PostgreSQL, configure it with secure defaults, and display the credentials</li>
+                <li>These credentials will be automatically saved in the NEXDB configuration</li>
+            </ol>
             
             <div class="alert alert-success">
                 <div class="alert-title">
                     <i class="fas fa-check-circle"></i> Tip
                 </div>
-                <p>Check out the detailed tutorials in the <a href="#database-setup">Database Setup</a> section for more information on configuring different database types.</p>
+                <p>The PostgreSQL installation process handles all configurations automatically, including setting a secure random password for the 'postgres' user.</p>
+            </div>
+        </section>
+
+        <section id="database-setup">
+            <h2>Database Setup</h2>
+            <p>NEXDB comes pre-configured with MySQL. PostgreSQL can be installed through the dashboard.</p>
+            
+            <h3>MySQL Configuration</h3>
+            <p>MySQL is installed and configured automatically during the NEXDB installation process. The MySQL root password is generated during installation and displayed in the terminal.</p>
+            
+            <h3>PostgreSQL Installation</h3>
+            <p>To install and configure PostgreSQL:</p>
+            <ol>
+                <li>Navigate to "System" → "Dashboard"</li>
+                <li>Find the PostgreSQL service in the services list</li>
+                <li>Click the "Install PostgreSQL" button</li>
+                <li>Wait for the installation to complete</li>
+                <li>The system will display the credentials and save them automatically</li>
+            </ol>
+            
+            <p>The PostgreSQL installation process:</p>
+            <ul>
+                <li>Installs PostgreSQL server and client packages</li>
+                <li>Starts and enables the PostgreSQL service</li>
+                <li>Sets a secure random password for the 'postgres' user</li>
+                <li>Automatically configures NEXDB to connect to the local PostgreSQL server</li>
+            </ul>
+            
+            <div class="alert alert-info">
+                <div class="alert-title">
+                    <i class="fas fa-info-circle"></i> Note
+                </div>
+                <p>PostgreSQL installation requires root privileges and is only supported on Ubuntu systems.</p>
             </div>
         </section>
 

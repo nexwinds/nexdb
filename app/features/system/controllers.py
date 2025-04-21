@@ -1,11 +1,19 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request, jsonify
 from typing import Dict, Any
+from flask_login import login_required
 
 from app.features.auth.decorators import login_required
-from app.features.system.services.system_service import get_system_service
+from app.features.system.services.system_service import get_system_service, SystemService
 from app.features.system.types import SystemPageProps, FirewallRule
 from app.features.database.services.mysql_service import MySQLService
 from app.features.database.services.postgres_service import PostgresService
+from app.features.system.services.postgres_installer import get_postgres_installer
+from app.utils.mysql_manager import MySQLManager
+from app.utils.postgres_manager import PostgresManager
+import psutil
+import platform
+import datetime
+import socket
 
 
 system_bp = Blueprint('system', __name__, url_prefix='/system')
@@ -16,33 +24,49 @@ system_bp = Blueprint('system', __name__, url_prefix='/system')
 def dashboard():
     """Display system dashboard with monitoring information"""
     try:
-        # Get system service
-        system_service = get_system_service()
+        # Create service instance
+        system_service = SystemService()
         
-        # Get database services
-        mysql_service = MySQLService()
-        postgres_service = PostgresService()
-        
-        # Get system information and usage
+        # Get system information
         system_info = system_service.get_system_info()
-        system_usage = system_service.get_system_usage()
-        network_stats = system_service.get_network_stats()
-        disk_io = system_service.get_disk_io()
-        timezone_info = system_service.get_timezone()
-        firewall_rules = system_service.get_firewall_rules()
         
-        # Get database status
-        mysql_status = mysql_service.get_status()
-        postgres_status = postgres_service.get_status()
+        # Get MySQL status
+        mysql_manager = MySQLManager(
+            host=current_app.config['MYSQL_HOST'],
+            port=current_app.config['MYSQL_PORT'],
+            user=current_app.config['MYSQL_USER'],
+            password=current_app.config['MYSQL_PASSWORD']
+        )
         
-        # Create page props
-        props: SystemPageProps = {
+        # Get PostgreSQL status
+        postgres_manager = PostgresManager(
+            host=current_app.config['POSTGRES_HOST'],
+            port=current_app.config['POSTGRES_PORT'],
+            user=current_app.config['POSTGRES_USER'],
+            password=current_app.config['POSTGRES_PASSWORD']
+        )
+        
+        try:
+            mysql_status = mysql_manager.get_status()
+        except:
+            mysql_status = False
+            
+        try:
+            postgres_status = postgres_manager.get_status()
+        except:
+            postgres_status = False
+        
+        # Get detailed PostgreSQL installation status
+        postgres_installer = get_postgres_installer()
+        postgres_install_status = postgres_installer.get_postgres_status()
+        
+        # Create props for template
+        props = {
             'system_info': system_info,
-            'system_usage': system_usage,
-            'network_stats': network_stats,
-            'disk_io': disk_io,
-            'timezone_info': timezone_info,
-            'firewall_rules': firewall_rules
+            'mysql_status': mysql_status,
+            'postgres_status': postgres_status,
+            'postgres_install_status': postgres_install_status,
+            'title': 'System Dashboard'
         }
         
         # Add database status for the services table
@@ -156,5 +180,51 @@ def delete_firewall_rule(rule_id: str):
     
     except Exception as e:
         current_app.logger.error(f"Error deleting firewall rule: {str(e)}")
+        flash(f'An error occurred: {str(e)}', 'danger')
+        return redirect(url_for('system.dashboard'))
+
+
+@system_bp.route('/install-postgresql', methods=['POST'])
+@login_required
+def install_postgresql():
+    """Install PostgreSQL database server"""
+    try:
+        # Get the installer
+        postgres_installer = get_postgres_installer()
+        
+        # Check if already installed
+        if postgres_installer.check_if_installed():
+            flash('PostgreSQL is already installed.', 'info')
+            return redirect(url_for('system.dashboard'))
+        
+        # Install PostgreSQL
+        success, message = postgres_installer.install()
+        
+        if success:
+            # Save the credentials in the app configuration
+            password = message.split('password: ')[1] if 'password: ' in message else None
+            
+            if password:
+                # Store in configuration
+                from app.db.db import get_db
+                db = get_db()
+                db.execute('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)', 
+                          ('postgres_host', 'localhost'))
+                db.execute('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)', 
+                          ('postgres_port', '5432'))
+                db.execute('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)', 
+                          ('postgres_user', 'postgres'))
+                db.execute('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)', 
+                          ('postgres_password', password))
+                db.commit()
+            
+            flash(message, 'success')
+        else:
+            flash(f'Failed to install PostgreSQL: {message}', 'danger')
+        
+        return redirect(url_for('system.dashboard'))
+    
+    except Exception as e:
+        current_app.logger.error(f"Error installing PostgreSQL: {str(e)}")
         flash(f'An error occurred: {str(e)}', 'danger')
         return redirect(url_for('system.dashboard')) 

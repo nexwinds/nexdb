@@ -43,8 +43,8 @@ include 'includes/header.php';
                     <i class="fas fa-database"></i>
                 </div>
                 <h3>Multi-Database Support</h3>
-                <p>Connect to and manage MySQL, PostgreSQL, MongoDB, and more from a single unified interface.</p>
-                <a href="docs.php#supported-databases" class="btn btn-sm btn-outline">Learn More</a>
+                <p>Connect to and manage MySQL 8 by default, with the ability to install and configure PostgreSQL directly from the dashboard.</p>
+                <a href="docs.php#database-setup" class="btn btn-sm btn-outline">Learn More</a>
             </div>
             
             <div class="feature-card">
@@ -52,17 +52,17 @@ include 'includes/header.php';
                     <i class="fas fa-search"></i>
                 </div>
                 <h3>Advanced Data Explorer</h3>
-                <p>Powerful query builder with syntax highlighting, autocompletion, and visual results to explore your data with ease.</p>
-                <a href="docs.php#data-explorer" class="btn btn-sm btn-outline">Learn More</a>
+                <p>Powerful query builder with syntax highlighting and visual results to explore your database tables with ease.</p>
+                <a href="docs.php#database-explorer" class="btn btn-sm btn-outline">Learn More</a>
             </div>
             
             <div class="feature-card">
                 <div class="feature-icon">
                     <i class="fas fa-chart-line"></i>
                 </div>
-                <h3>Performance Monitoring</h3>
-                <p>Real-time monitoring of database performance with insights and optimization recommendations.</p>
-                <a href="docs.php#performance-monitoring" class="btn btn-sm btn-outline">Learn More</a>
+                <h3>System Monitoring</h3>
+                <p>Real-time monitoring of database and system performance with resource usage visualization.</p>
+                <a href="docs.php#system-dashboard" class="btn btn-sm btn-outline">Learn More</a>
             </div>
             
             <div class="feature-card">
@@ -70,7 +70,7 @@ include 'includes/header.php';
                     <i class="fas fa-shield-alt"></i>
                 </div>
                 <h3>Security Management</h3>
-                <p>Manage users, roles, and permissions with fine-grained access control and security auditing.</p>
+                <p>Manage database users and permissions with fine-grained access control and secure authentication.</p>
                 <a href="docs.php#security" class="btn btn-sm btn-outline">Learn More</a>
             </div>
             
@@ -79,17 +79,17 @@ include 'includes/header.php';
                     <i class="fas fa-sync-alt"></i>
                 </div>
                 <h3>Backup & Recovery</h3>
-                <p>Schedule automated backups and effortlessly restore databases when needed with point-in-time recovery.</p>
+                <p>Schedule automated backups with optional AWS S3 integration for secure off-site storage and easy restoration.</p>
                 <a href="docs.php#backup-recovery" class="btn btn-sm btn-outline">Learn More</a>
             </div>
             
             <div class="feature-card">
                 <div class="feature-icon">
-                    <i class="fas fa-terminal"></i>
+                    <i class="fas fa-cogs"></i>
                 </div>
-                <h3>Command Line Interface</h3>
-                <p>Powerful CLI tools for automation, scripting, and integration with your development workflow.</p>
-                <a href="docs.php#cli" class="btn btn-sm btn-outline">Learn More</a>
+                <h3>Easy Installation</h3>
+                <p>Simple one-line installation script for Ubuntu 24+ with automatic MySQL configuration and secure defaults.</p>
+                <a href="docs.php#installation" class="btn btn-sm btn-outline">Learn More</a>
             </div>
         </div>
     </div>
@@ -108,10 +108,10 @@ include 'includes/header.php';
                 <div class="installation-step">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <h3>Install with NPM</h3>
-                        <p>Install NEXDB globally using npm:</p>
+                        <h3>Install with One Command</h3>
+                        <p>Install NEXDB using our installation script:</p>
                         <div class="code-block">
-                            <pre>npm install -g nexdb</pre>
+                            <pre>wget -qO- https://raw.githubusercontent.com/nexwinds/nexdb/main/install.sh | sudo bash</pre>
                             <button class="copy-button">Copy</button>
                         </div>
                     </div>
@@ -120,10 +120,12 @@ include 'includes/header.php';
                 <div class="installation-step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <h3>Initialize Configuration</h3>
-                        <p>Run the setup wizard to create your configuration:</p>
+                        <h3>Save Your Credentials</h3>
+                        <p>The installation will display your admin and MySQL credentials:</p>
                         <div class="code-block">
-                            <pre>nexdb init</pre>
+                            <pre>Username: admin
+Password: [generated password]
+MySQL Root Password: [generated password]</pre>
                             <button class="copy-button">Copy</button>
                         </div>
                     </div>
@@ -132,10 +134,10 @@ include 'includes/header.php';
                 <div class="installation-step">
                     <div class="step-number">3</div>
                     <div class="step-content">
-                        <h3>Start NEXDB</h3>
-                        <p>Launch the NEXDB server:</p>
+                        <h3>Access NEXDB</h3>
+                        <p>Open your browser and navigate to your server's IP address:</p>
                         <div class="code-block">
-                            <pre>nexdb start</pre>
+                            <pre>http://YOUR_SERVER_IP:5000</pre>
                             <button class="copy-button">Copy</button>
                         </div>
                     </div>
@@ -144,10 +146,10 @@ include 'includes/header.php';
                 <div class="installation-step">
                     <div class="step-number">4</div>
                     <div class="step-content">
-                        <h3>Access Web Interface</h3>
-                        <p>Open your browser and navigate to:</p>
+                        <h3>Install PostgreSQL (Optional)</h3>
+                        <p>If needed, install PostgreSQL directly from the System Dashboard:</p>
                         <div class="code-block">
-                            <pre>http://localhost:8080</pre>
+                            <pre>System → Dashboard → Install PostgreSQL</pre>
                             <button class="copy-button">Copy</button>
                         </div>
                     </div>
@@ -167,7 +169,7 @@ include 'includes/header.php';
         <h2>Ready to Transform Your Database Management?</h2>
         <p>Join thousands of developers and database administrators who've simplified their database workflows with NEXDB.</p>
         <div class="cta-buttons">
-            <a href="#" class="btn btn-lg btn-light">Download NEXDB</a>
+            <a href="https://github.com/nexwinds/nexdb" class="btn btn-lg btn-light">Get NEXDB</a>
             <a href="docs.php" class="btn btn-lg btn-outline-light">Browse Documentation</a>
         </div>
     </div>

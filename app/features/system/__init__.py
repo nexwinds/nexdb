@@ -1,3 +1,7 @@
+"""
+System module for monitoring and managing the host system
+"""
+
 from flask import Flask
 from app.features.system.api.system_api import system_api
 from app.features.system.api.services_api import services_api
@@ -12,4 +16,8 @@ def register_blueprints(app: Flask):
     app.register_blueprint(timezone_api)
     
     # Register the web routes blueprint
-    app.register_blueprint(system_routes) 
+    app.register_blueprint(system_routes)
+
+    # Register the new PostgreSQL installer service
+    from app.features.system.controllers import system_bp
+    app.register_blueprint(system_bp) 

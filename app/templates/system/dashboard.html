@@ -1,427 +1,170 @@
 {% extends 'base.html' %}
 
-{% block title %}System Dashboard{% endblock %}
+{% block title %}System Dashboard - NexDB Manager{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-  <div class="row">
-    <div class="col-12">
-      <div class="card mb-4">
-        <div class="card-header pb-0 d-flex justify-content-between align-items-center">
-          <h6>System Information</h6>
-          <button id="refresh-dashboard" class="btn btn-sm btn-primary">
-            <i class="fas fa-sync-alt me-2"></i>Refresh
-          </button>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <div class="table-responsive">
-                <table class="table table-hover">
-                  <tbody>
-                    <tr>
-                      <th>Hostname</th>
-                      <td id="hostname">{{ system_info.hostname }}</td>
-                    </tr>
-                    <tr>
-                      <th>Platform</th>
-                      <td id="platform">{{ system_info.platform }}</td>
-                    </tr>
-                    <tr>
-                      <th>System</th>
-                      <td id="system">{{ system_info.system }}</td>
-                    </tr>
-                    <tr>
-                      <th>Architecture</th>
-                      <td id="architecture">{{ system_info.architecture }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="table-responsive">
-                <table class="table table-hover">
-                  <tbody>
-                    <tr>
-                      <th>IP Address</th>
-                      <td id="ip-address">{{ system_info.ip_address }}</td>
-                    </tr>
-                    <tr>
-                      <th>Python Version</th>
-                      <td id="python-version">{{ system_info.python_version }}</td>
-                    </tr>
-                    <tr>
-                      <th>Boot Time</th>
-                      <td id="boot-time">{{ system_info.boot_time }}</td>
-                    </tr>
-                    <tr>
-                      <th>Last Update</th>
-                      <td id="last-update">{{ timestamp }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2><i class="fas fa-cogs me-2"></i>System Dashboard</h2>
+        <p class="text-muted">Monitor and manage your system and database services</p>
     </div>
-  </div>
-  
-  <div class="row">
-    <div class="col-lg-4 col-md-6">
-      <div class="card mb-4">
-        <div class="card-header pb-0">
-          <h6>CPU Usage</h6>
-        </div>
-        <div class="card-body pt-4 p-3">
-          <div class="progress-wrapper">
-            <div class="progress-info">
-              <div class="progress-percentage">
-                <span id="cpu-percent" class="text-sm font-weight-bold">{{ system_usage.cpu.percent }}%</span>
-              </div>
-            </div>
-            <div class="progress">
-              <div id="cpu-progress" class="progress-bar bg-gradient-primary" role="progressbar" 
-                  aria-valuenow="{{ system_usage.cpu.percent }}" aria-valuemin="0" aria-valuemax="100" 
-                  style="width: {{ system_usage.cpu.percent }}%;">
-              </div>
-            </div>
-          </div>
-          <div class="mt-3">
-            <p class="mb-0 text-sm">
-              <span class="text-success font-weight-bolder">CPU Cores: </span>
-              <span id="cpu-count">{{ system_usage.cpu.count }}</span> (Physical: <span id="cpu-physical">{{ system_usage.cpu.physical }}</span>)
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-lg-4 col-md-6">
-      <div class="card mb-4">
-        <div class="card-header pb-0">
-          <h6>Memory Usage</h6>
-        </div>
-        <div class="card-body pt-4 p-3">
-          <div class="progress-wrapper">
-            <div class="progress-info">
-              <div class="progress-percentage">
-                <span id="memory-percent" class="text-sm font-weight-bold">{{ system_usage.memory.percent }}%</span>
-              </div>
-            </div>
-            <div class="progress">
-              <div id="memory-progress" class="progress-bar bg-gradient-info" role="progressbar" 
-                  aria-valuenow="{{ system_usage.memory.percent }}" aria-valuemin="0" aria-valuemax="100" 
-                  style="width: {{ system_usage.memory.percent }}%;">
-              </div>
-            </div>
-          </div>
-          <div class="mt-3">
-            <p class="mb-0 text-sm">
-              <span>Used: </span>
-              <span id="memory-used" class="text-success font-weight-bolder">{{ system_usage.memory.used }}</span>
-              <span> / Total: </span>
-              <span id="memory-total" class="text-success font-weight-bolder">{{ system_usage.memory.total }}</span>
-            </p>
-            <p class="mb-0 text-sm">
-              <span>Available: </span>
-              <span id="memory-available" class="text-success font-weight-bolder">{{ system_usage.memory.available }}</span>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-lg-4 col-md-12">
-      <div class="card mb-4">
-        <div class="card-header pb-0">
-          <h6>Network Traffic</h6>
-        </div>
-        <div class="card-body pt-4 p-3">
-          <div class="d-flex">
-            <div class="w-50 p-2 border-end">
-              <h6 class="text-center text-xs text-uppercase text-muted ls-1 mb-1">Sent</h6>
-              <h5 id="network-sent" class="text-center mb-0">{{ system_usage.network.sent }}</h5>
-            </div>
-            <div class="w-50 p-2">
-              <h6 class="text-center text-xs text-uppercase text-muted ls-1 mb-1">Received</h6>
-              <h5 id="network-received" class="text-center mb-0">{{ system_usage.network.received }}</h5>
-            </div>
-          </div>
-          <div class="mt-3 text-center">
-            <a href="{{ url_for('system_routes.network') }}" class="btn btn-sm btn-outline-primary">View Details</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="row">
-    <div class="col-12">
-      <div class="card mb-4">
-        <div class="card-header pb-0">
-          <h6>Disk Usage</h6>
-        </div>
-        <div class="card-body px-0 pt-0 pb-2">
-          <div class="table-responsive p-0">
-            <table class="table align-items-center mb-0">
-              <thead>
-                <tr>
-                  <th class="text-uppercase text-xxs font-weight-bolder opacity-7">Mountpoint</th>
-                  <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Usage</th>
-                  <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Free/Total</th>
-                  <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Type</th>
-                </tr>
-              </thead>
-              <tbody id="disk-table-body">
-                {% for disk in system_usage.disks %}
-                <tr>
-                  <td>
-                    <div class="d-flex px-3 py-1">
-                      <div class="d-flex flex-column justify-content-center">
-                        <h6 class="mb-0 text-sm">{{ disk.mountpoint }}</h6>
-                        <p class="text-xs text-secondary mb-0">{{ disk.device }}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div class="progress-wrapper pe-4">
-                      <div class="progress-info">
-                        <div class="progress-percentage">
-                          <span class="text-xs font-weight-bold">{{ disk.percent }}%</span>
-                        </div>
-                      </div>
-                      <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-gradient-danger" role="progressbar" 
-                            aria-valuenow="{{ disk.percent }}" aria-valuemin="0" aria-valuemax="100" 
-                            style="width: {{ disk.percent }}%;">
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">{{ disk.free }} free</p>
-                    <p class="text-xs text-secondary mb-0">{{ disk.total }} total</p>
-                  </td>
-                  <td>
-                    <span class="badge badge-sm bg-gradient-success">{{ disk.fstype }}</span>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <div class="mt-3 text-center">
-            <a href="{{ url_for('system_routes.disk') }}" class="btn btn-sm btn-outline-primary">View Details</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="row">
-    <div class="col-12">
-      <div class="card mb-4">
-        <div class="card-header pb-0 d-flex justify-content-between align-items-center">
-          <h6>Top Processes</h6>
-          <a href="{{ url_for('system_routes.processes') }}" class="btn btn-sm btn-primary">View All</a>
-        </div>
-        <div class="card-body px-0 pt-0 pb-2">
-          <div class="table-responsive p-0">
-            <table class="table align-items-center mb-0">
-              <thead>
-                <tr>
-                  <th class="text-uppercase text-xxs font-weight-bolder opacity-7">PID/Name</th>
-                  <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">User</th>
-                  <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Memory</th>
-                  <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">CPU</th>
-                  <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
-                  <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Started</th>
-                </tr>
-              </thead>
-              <tbody id="process-table-body">
-                {% for process in top_processes %}
-                <tr>
-                  <td>
-                    <div class="d-flex px-3 py-1">
-                      <div class="d-flex flex-column justify-content-center">
-                        <h6 class="mb-0 text-sm">{{ process.name }}</h6>
-                        <p class="text-xs text-secondary mb-0">PID: {{ process.pid }}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">{{ process.username }}</p>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">{{ process.memory_mb }}</p>
-                    <p class="text-xs text-secondary mb-0">{{ process.memory_percent|round(1) }}%</p>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">{{ process.cpu_percent|round(1) }}%</p>
-                  </td>
-                  <td>
-                    <span class="badge badge-sm {{ 'bg-gradient-success' if process.status == 'running' else 'bg-gradient-secondary' }}">{{ process.status }}</span>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">{{ process.create_time }}</p>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
+
+<!-- Status Cards -->
+<div class="row mb-4">
+    <!-- System Information -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-server me-2"></i>System Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped mb-0">
+                    <tr>
+                        <th>Operating System:</th>
+                        <td>{{ system_info.os_name }} {{ system_info.os_version }}</td>
+                    </tr>
+                    <tr>
+                        <th>Hostname:</th>
+                        <td>{{ system_info.hostname }}</td>
+                    </tr>
+                    <tr>
+                        <th>CPU:</th>
+                        <td>{{ system_info.cpu_model }} ({{ system_info.cpu_cores }} cores)</td>
+                    </tr>
+                    <tr>
+                        <th>Memory:</th>
+                        <td>{{ system_info.memory_total }} GB</td>
+                    </tr>
+                    <tr>
+                        <th>Disk Space:</th>
+                        <td>{{ system_info.disk_total }} GB ({{ system_info.disk_free }} GB free)</td>
+                    </tr>
+                    <tr>
+                        <th>IP Address:</th>
+                        <td>{{ system_info.ip_address }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Services Status -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Services Status</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped mb-0">
+                    <tr>
+                        <th>MySQL:</th>
+                        <td>
+                            <span class="badge bg-{{ 'success' if mysql_status else 'danger' }}">
+                                {{ 'Running' if mysql_status else 'Stopped' }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>PostgreSQL:</th>
+                        <td>
+                            {% if postgres_install_status.installed %}
+                                <span class="badge bg-{{ 'success' if postgres_install_status.running else 'danger' }}">
+                                    {{ 'Running' if postgres_install_status.running else 'Stopped' }}
+                                </span>
+                                {% if postgres_install_status.version %}
+                                    <small class="text-muted">v{{ postgres_install_status.version }}</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary">Not Installed</span>
+                                <form method="post" action="{{ url_for('system.install_postgresql') }}" class="d-inline ms-2">
+                                    <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('This will install PostgreSQL database server. Continue?');">
+                                        <i class="fas fa-download me-1"></i>Install PostgreSQL
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Web Server:</th>
+                        <td>
+                            <span class="badge bg-success">Running</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Usage Charts -->
+<div class="row">
+    <!-- CPU Usage -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-microchip me-2"></i>CPU Usage</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 30px;">
+                    <div class="progress-bar bg-info" role="progressbar" style="width: {{ system_info.cpu_percent }}%;" 
+                         aria-valuenow="{{ system_info.cpu_percent }}" aria-valuemin="0" aria-valuemax="100">
+                        {{ system_info.cpu_percent }}%
+                    </div>
+                </div>
+                <p class="mb-0 text-muted">Current CPU utilization</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Memory Usage -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-white">
+                <h5 class="mb-0"><i class="fas fa-memory me-2"></i>Memory Usage</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 30px;">
+                    {% set memory_percent = (system_info.memory_used / system_info.memory_total * 100)|round %}
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: {{ memory_percent }}%;" 
+                         aria-valuenow="{{ memory_percent }}" aria-valuemin="0" aria-valuemax="100">
+                        {{ memory_percent }}%
+                    </div>
+                </div>
+                <p class="mb-0 text-muted">{{ system_info.memory_used }} GB used of {{ system_info.memory_total }} GB</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Disk Usage -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-hdd me-2"></i>Disk Usage</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 30px;">
+                    {% set disk_percent = ((system_info.disk_total - system_info.disk_free) / system_info.disk_total * 100)|round %}
+                    <div class="progress-bar bg-secondary" role="progressbar" style="width: {{ disk_percent }}%;" 
+                         aria-valuenow="{{ disk_percent }}" aria-valuemin="0" aria-valuemax="100">
+                        {{ disk_percent }}%
+                    </div>
+                </div>
+                <p class="mb-0 text-muted">{{ (system_info.disk_total - system_info.disk_free)|round(1) }} GB used of {{ system_info.disk_total }} GB</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // Setup refresh button
-    const refreshBtn = document.getElementById('refresh-dashboard');
-    refreshBtn.addEventListener('click', refreshDashboard);
-    
-    // Set automatic refresh every 30 seconds
-    const refreshInterval = 30000; // 30 seconds
-    setInterval(refreshDashboard, refreshInterval);
-    
-    function refreshDashboard() {
-      fetch('{{ url_for("system_routes.api_dashboard_data") }}')
-        .then(response => response.json())
-        .then(data => {
-          updateSystemInfo(data.system_info);
-          updateSystemUsage(data.system_usage);
-          updateProcesses(data.top_processes);
-          updateTimestamp(data.timestamp);
-        })
-        .catch(error => console.error('Error refreshing dashboard:', error));
-    }
-    
-    function updateSystemInfo(info) {
-      document.getElementById('hostname').textContent = info.hostname;
-      document.getElementById('platform').textContent = info.platform;
-      document.getElementById('system').textContent = info.system;
-      document.getElementById('architecture').textContent = info.architecture;
-      document.getElementById('ip-address').textContent = info.ip_address;
-      document.getElementById('python-version').textContent = info.python_version;
-      document.getElementById('boot-time').textContent = info.boot_time;
-    }
-    
-    function updateSystemUsage(usage) {
-      // Update CPU
-      const cpuPercent = usage.cpu.percent;
-      document.getElementById('cpu-percent').textContent = cpuPercent + '%';
-      const cpuProgress = document.getElementById('cpu-progress');
-      cpuProgress.style.width = cpuPercent + '%';
-      cpuProgress.setAttribute('aria-valuenow', cpuPercent);
-      document.getElementById('cpu-count').textContent = usage.cpu.count;
-      document.getElementById('cpu-physical').textContent = usage.cpu.physical;
-      
-      // Update Memory
-      const memPercent = usage.memory.percent;
-      document.getElementById('memory-percent').textContent = memPercent + '%';
-      const memProgress = document.getElementById('memory-progress');
-      memProgress.style.width = memPercent + '%';
-      memProgress.setAttribute('aria-valuenow', memPercent);
-      document.getElementById('memory-used').textContent = usage.memory.used;
-      document.getElementById('memory-total').textContent = usage.memory.total;
-      document.getElementById('memory-available').textContent = usage.memory.available;
-      
-      // Update Network
-      document.getElementById('network-sent').textContent = usage.network.sent;
-      document.getElementById('network-received').textContent = usage.network.received;
-      
-      // Update Disks
-      const diskTableBody = document.getElementById('disk-table-body');
-      diskTableBody.innerHTML = '';
-      
-      usage.disks.forEach(disk => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>
-            <div class="d-flex px-3 py-1">
-              <div class="d-flex flex-column justify-content-center">
-                <h6 class="mb-0 text-sm">${disk.mountpoint}</h6>
-                <p class="text-xs text-secondary mb-0">${disk.device}</p>
-              </div>
-            </div>
-          </td>
-          <td>
-            <div class="progress-wrapper pe-4">
-              <div class="progress-info">
-                <div class="progress-percentage">
-                  <span class="text-xs font-weight-bold">${disk.percent}%</span>
-                </div>
-              </div>
-              <div class="progress" style="height: 6px;">
-                <div class="progress-bar bg-gradient-danger" role="progressbar" 
-                    aria-valuenow="${disk.percent}" aria-valuemin="0" aria-valuemax="100" 
-                    style="width: ${disk.percent}%;">
-                </div>
-              </div>
-            </div>
-          </td>
-          <td>
-            <p class="text-xs font-weight-bold mb-0">${disk.free} free</p>
-            <p class="text-xs text-secondary mb-0">${disk.total} total</p>
-          </td>
-          <td>
-            <span class="badge badge-sm bg-gradient-success">${disk.fstype}</span>
-          </td>
-        `;
-        diskTableBody.appendChild(row);
-      });
-    }
-    
-    function updateProcesses(processes) {
-      const processTableBody = document.getElementById('process-table-body');
-      processTableBody.innerHTML = '';
-      
-      processes.forEach(process => {
-        const row = document.createElement('tr');
-        const memoryPercent = process.memory_percent ? process.memory_percent.toFixed(1) : '0.0';
-        const cpuPercent = process.cpu_percent ? process.cpu_percent.toFixed(1) : '0.0';
-        const statusClass = process.status === 'running' ? 'bg-gradient-success' : 'bg-gradient-secondary';
-        
-        row.innerHTML = `
-          <td>
-            <div class="d-flex px-3 py-1">
-              <div class="d-flex flex-column justify-content-center">
-                <h6 class="mb-0 text-sm">${process.name}</h6>
-                <p class="text-xs text-secondary mb-0">PID: ${process.pid}</p>
-              </div>
-            </div>
-          </td>
-          <td>
-            <p class="text-xs font-weight-bold mb-0">${process.username}</p>
-          </td>
-          <td>
-            <p class="text-xs font-weight-bold mb-0">${process.memory_mb}</p>
-            <p class="text-xs text-secondary mb-0">${memoryPercent}%</p>
-          </td>
-          <td>
-            <p class="text-xs font-weight-bold mb-0">${cpuPercent}%</p>
-          </td>
-          <td>
-            <span class="badge badge-sm ${statusClass}">${process.status}</span>
-          </td>
-          <td>
-            <p class="text-xs font-weight-bold mb-0">${process.create_time}</p>
-          </td>
-        `;
-        processTableBody.appendChild(row);
-      });
-    }
-    
-    function updateTimestamp(timestamp) {
-      document.getElementById('last-update').textContent = timestamp;
-    }
-  });
+    // Refresh the page every 30 seconds to update system info
+    setTimeout(function() {
+        location.reload();
+    }, 30000);
 </script>
 {% endblock %} 

@@ -19,14 +19,6 @@ print_error() {
     echo -e "${RED}[-]${NC} $1"
 }
 
-check_command() {
-    if command -v $1 &> /dev/null; then
-        return 0
-    else
-        return 1
-    fi
-}
-
 # Display banner
 echo "================================================================="
 echo "                NEXDB - Database Manager Installation            "
@@ -35,67 +27,56 @@ echo "This script will install NEXDB and configure it for your system."
 echo
 
 # Check if running as root
-if [ "$EUID" -ne 0 ] && [ "$(uname)" != "Darwin" ]; then
-    print_warning "Not running as root. You may need sudo for some operations."
-    echo "Continue anyway? (y/n) [n]: "
-    read CONTINUE
-    CONTINUE=${CONTINUE:-n}
+if [ "$EUID" -ne 0 ]; then
+    print_error "This script must be run as root. Please use sudo."
+    exit 1
+fi
+
+# Check if OS is Ubuntu 24 or higher
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    if [ "$ID" != "ubuntu" ]; then
+        print_error "This script is only compatible with Ubuntu."
+        exit 1
+    fi
     
-    if [ "$CONTINUE" != "y" ]; then
-        print_message "Please run this script with sudo for a complete installation."
+    UBUNTU_VERSION=$(echo $VERSION_ID | cut -d. -f1)
+    if [ "$UBUNTU_VERSION" -lt 24 ]; then
+        print_error "This script requires Ubuntu 24 or higher. Found: $VERSION_ID"
+        exit 1
+    fi
+else
+    print_error "Could not determine OS version. This script is only compatible with Ubuntu 24+."
+    exit 1
+fi
+
+print_message "Detected compatible Ubuntu version: $VERSION_ID"
+
+# Check if this is a new VPS installation
+if [ -d "/opt/nexdb" ]; then
+    print_error "NEXDB is already installed. This script is intended for new installations only."
+    exit 1
+fi
+
+# Check if MySQL is already installed
+if command -v mysql &> /dev/null; then
+    print_warning "MySQL is already installed on this system."
+    echo "Do you want to continue with the existing MySQL installation? (y/n) [y]: "
+    read CONTINUE_MYSQL
+    CONTINUE_MYSQL=${CONTINUE_MYSQL:-y}
+    
+    if [ "$CONTINUE_MYSQL" != "y" ]; then
+        print_error "Installation aborted. Please remove MySQL first or use a fresh VPS."
         exit 1
     fi
 fi
 
-# Detect OS type
-if [ "$(uname)" == "Darwin" ]; then
-    OS_TYPE="macos"
-elif [ -f /etc/debian_version ]; then
-    OS_TYPE="debian"
-elif [ -f /etc/redhat-release ]; then
-    OS_TYPE="redhat"
-elif [ -f /etc/arch-release ]; then
-    OS_TYPE="arch"
-else
-    OS_TYPE="unknown"
-    print_warning "Could not determine OS type. Some features may not work correctly."
-fi
+# Install required packages
+print_message "Installing required packages..."
+apt-get update
+apt-get install -y python3 python3-pip python3-venv wget curl gnupg lsb-release
 
-print_message "Detected OS type: $OS_TYPE"
-
-# Check and install Python if needed
-if ! check_command python3; then
-    print_message "Installing Python 3..."
-    
-    case $OS_TYPE in
-        debian)
-            apt-get update
-            apt-get install -y python3 python3-pip python3-venv
-            ;;
-        redhat)
-            yum install -y python3 python3-pip
-            ;;
-        arch)
-            pacman -S --noconfirm python python-pip
-            ;;
-        macos)
-            if check_command brew; then
-                brew install python
-            else
-                print_error "Homebrew is not installed. Please install Python 3 manually."
-                exit 1
-            fi
-            ;;
-        *)
-            print_error "Please install Python 3 manually."
-            exit 1
-            ;;
-    esac
-else
-    print_message "Python 3 is already installed."
-fi
-
-# Verify Python version
+# Check Python version
 PYTHON_VERSION=$(python3 --version | cut -d' ' -f2)
 print_message "Python version: $PYTHON_VERSION"
 
@@ -108,33 +89,30 @@ if [ "$PYTHON_MAJOR" -lt 3 ] || ([ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" 
     exit 1
 fi
 
+# Install MySQL 8
+print_message "Installing MySQL 8..."
+apt-get install -y mysql-server-8.0
+
+# Secure MySQL installation
+print_message "Securing MySQL installation..."
+# Generate a random password for MySQL root user
+MYSQL_ROOT_PASSWORD=$(openssl rand -base64 12)
+
+# Set MySQL root password
+mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_ROOT_PASSWORD}';"
+mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "DELETE FROM mysql.user WHERE User='';"
+mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
+mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "DROP DATABASE IF EXISTS test;"
+mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+mysql -u root -p${MYSQL_ROOT_PASSWORD} -e "FLUSH PRIVILEGES;"
+
+print_message "MySQL root password set to: ${MYSQL_ROOT_PASSWORD}"
+print_message "Please save this password in a secure location."
+
 # Setup installation directory
 INSTALL_DIR="/opt/nexdb"
-if [ "$OS_TYPE" == "macos" ]; then
-    INSTALL_DIR="$HOME/nexdb"
-fi
-
-# Check if application already exists
-if [ -d "$INSTALL_DIR" ]; then
-    print_warning "NEXDB is already installed at $INSTALL_DIR"
-    echo "Do you want to reinstall? This will preserve your database but reinstall the application. (y/n) [n]: "
-    read REINSTALL
-    REINSTALL=${REINSTALL:-n}
-    
-    if [ "$REINSTALL" != "y" ]; then
-        print_message "Installation cancelled. Your existing installation has not been modified."
-        exit 0
-    fi
-    
-    print_message "Reinstalling NEXDB..."
-else
-    print_message "Creating installation directory at $INSTALL_DIR..."
-    mkdir -p "$INSTALL_DIR"
-    if [ $? -ne 0 ]; then
-        print_error "Failed to create installation directory. Check permissions."
-        exit 1
-    fi
-fi
+print_message "Creating installation directory at $INSTALL_DIR..."
+mkdir -p "$INSTALL_DIR"
 
 # Copy application files
 CURRENT_DIR=$(pwd)
@@ -157,11 +135,7 @@ python3 -m venv venv || {
 }
 
 # Activate virtual environment and install dependencies
-if [ "$OS_TYPE" == "macos" ] || [ "$OS_TYPE" == "unknown" ]; then
-    source venv/bin/activate
-else
-    source venv/bin/activate
-fi
+source venv/bin/activate
 
 print_message "Installing dependencies..."
 pip install --upgrade pip
@@ -173,63 +147,41 @@ pip install -r requirements.txt || {
 # Create instance directory for database and backups
 mkdir -p "$INSTALL_DIR/instance/backups"
 
-# Initialize the database
-print_message "Initializing database..."
+# Generate admin credentials
+ADMIN_USERNAME="admin"
+ADMIN_PASSWORD=$(openssl rand -base64 12)
+
+# Store MySQL credentials in SQLite configuration
+print_message "Initializing database and configuration..."
 python -m flask init-db || {
     print_error "Failed to initialize database."
     exit 1
 }
 
-# Create .env file for configuration
-print_message "Creating configuration file..."
-if [ ! -f "$INSTALL_DIR/.env" ]; then
-    cat > "$INSTALL_DIR/.env" << EOF
-# NEXDB Environment Configuration
-SECRET_KEY=$(python -c 'import os; print(os.urandom(24).hex())')
-DEBUG=False
+# Create admin account
+python -m flask create-admin --username "$ADMIN_USERNAME" --password "$ADMIN_PASSWORD" || {
+    print_error "Failed to create admin account."
+    exit 1
+}
 
-# Database URL (SQLite by default)
-DATABASE_URL=sqlite:///${INSTALL_DIR}/instance/nexdb.db
+# Store MySQL credentials in SQLite
+python -m flask store-config --key "mysql_host" --value "localhost"
+python -m flask store-config --key "mysql_port" --value "3306"
+python -m flask store-config --key "mysql_user" --value "root"
+python -m flask store-config --key "mysql_password" --value "${MYSQL_ROOT_PASSWORD}"
 
-# Backup directory
-BACKUP_DIR=${INSTALL_DIR}/instance/backups
+# Set up systemd service
+print_message "Setting up systemd service..."
 
-# MySQL settings (change as needed)
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=
-
-# PostgreSQL settings (change as needed)
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=
-
-# AWS S3 settings (for backups)
-AWS_ACCESS_KEY=
-AWS_SECRET_KEY=
-AWS_BUCKET_NAME=
-AWS_REGION=us-east-1
-EOF
-    print_message "Created default .env configuration file."
-else
-    print_message "Configuration file already exists, keeping existing configuration."
-fi
-
-# Set up service if not on macOS
-if [ "$OS_TYPE" != "macos" ]; then
-    print_message "Setting up systemd service..."
-    
-    # Create systemd service file
-    SERVICE_FILE="/etc/systemd/system/nexdb.service"
-    cat > "$SERVICE_FILE" << EOF
+# Create systemd service file
+SERVICE_FILE="/etc/systemd/system/nexdb.service"
+cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=NEXDB Database Manager
-After=network.target
+After=network.target mysql.service
 
 [Service]
-User=$(whoami)
+User=root
 WorkingDirectory=${INSTALL_DIR}
 ExecStart=${INSTALL_DIR}/venv/bin/gunicorn --bind 0.0.0.0:5000 'app:create_app()'
 Restart=always
@@ -239,42 +191,22 @@ Environment="PYTHONPATH=${INSTALL_DIR}"
 [Install]
 WantedBy=multi-user.target
 EOF
-    
-    # Reload systemd and enable service
-    systemctl daemon-reload
-    systemctl enable nexdb.service
-    systemctl start nexdb.service
-    
-    print_message "NEXDB service installed and started."
-    print_message "You can check the status with: systemctl status nexdb"
-else
-    print_message "Creating launch script..."
-    
-    # Create launch script for macOS
-    cat > "$INSTALL_DIR/start.sh" << EOF
-#!/bin/bash
-cd "$INSTALL_DIR"
-source venv/bin/activate
-exec gunicorn --bind 0.0.0.0:5000 "app:create_app()"
-EOF
-    
-    chmod +x "$INSTALL_DIR/start.sh"
-    
-    print_message "You can start NEXDB by running: $INSTALL_DIR/start.sh"
-fi
+
+# Reload systemd and enable service
+systemctl daemon-reload
+systemctl enable nexdb.service
+systemctl start nexdb.service
 
 print_message "Installation complete!"
-print_message "NEXDB is now available at: http://localhost:5000"
-print_message "Admin credentials are saved in: $INSTALL_DIR/instance/admin_credentials.txt"
-
-# Display saved credentials if the file exists
-CREDS_FILE="$INSTALL_DIR/instance/admin_credentials.txt"
-if [ -f "$CREDS_FILE" ]; then
-    echo "-----------------------------------------------------------------"
-    cat "$CREDS_FILE"
-    echo "-----------------------------------------------------------------"
-    echo "IMPORTANT: Save these credentials and delete the credentials file."
-    echo "You can delete it with: rm $CREDS_FILE"
-fi
+print_message "NEXDB is now available at: http://$(hostname -I | awk '{print $1}'):5000"
+print_message "Admin credentials:"
+echo "-----------------------------------------------------------------"
+echo "Username: $ADMIN_USERNAME"
+echo "Password: $ADMIN_PASSWORD"
+echo "-----------------------------------------------------------------"
+echo "MySQL Root Password: $MYSQL_ROOT_PASSWORD"
+echo "-----------------------------------------------------------------"
+echo "IMPORTANT: Save these credentials in a secure location!"
+echo "You can manage MySQL credentials and install PostgreSQL through the dashboard."
 
 
